@@ -15,20 +15,24 @@ def parse_options():
     data: Root of genotype data in eigenstrat format, i.e. root{.geno .snp .ind}
     gwas: Gwas data. 3-col: CHR, POS, EFFECT
     pops: Comma separated list of populations to include
+    inbred: Comma separated list of pops that might be inbred
     nboot: Number of bootstrap replicates. 
     """
-    options ={ "data":"", "gwas":"", "pops":[], "nboot":1000}
+    options ={ "data":"", "gwas":"", "pops":[], "inbred":[], "nboot":1000, "out":None}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "d:g:p:n:", ["data", "gwas", "pops", "nboot"])
+        opts, args = getopt.getopt(sys.argv[1:], "d:g:p:n:o:i:",
+                                   ["data", "gwas", "pops", "nboot", "out", "inbred"])
     except Exception as err:
         print(str(err))
         sys.exit()
 
     for o, a in opts:
         if o in ["-d","--data"]:         options["data"] = a
+        elif o in ["-o","--out"]:        options["out"] = a
         elif o in ["-g","--gwas"]:       options["gwas"] = a
         elif o in ["-p","--pops"]:       options["pops"] = a.split(",")
+        elif o in ["-i","--inbred"]:     options["inbred"] = a.split(",")
         elif o in ["-n","--nboot"]:      options["nboot"] = int(a)
 
     print("found options:", file=sys.stderr)
@@ -44,7 +48,7 @@ def parse_options():
 def main(options):
     # Load population data - TODO: Move all this to an eigenstrat class
     data=io.read_eigenstrat(options["data"], options["pops"])
-    drift.population_count(data)
+    drift.population_count(data, options["inbred"])
     drift.remove_monomorphic(data)
     drift.population_freq(data)
     del(data["GT"])                       # Save memory
@@ -53,12 +57,8 @@ def main(options):
     gwas=effects.effects(options["gwas"])
 
     test=Qx_test.Qx_test(gwas, data)
-
-    Qx=test.Qx()
-    print(str(Qx), file=sys.stderr)
-    test.bootstrap_statistic(10)
-    # pdb.set_trace()
-    
+    Qx=test.test( output_root=options["out"], nboot=options["nboot"])
+   
     return
 
 ###########################################################################

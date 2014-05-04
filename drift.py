@@ -6,10 +6,10 @@ import pdb
 
 ###########################################################################
 
-def population_count(data):
+def population_count(data, inbred=[]):
     """
-    Compute population counts. We pick alleles at random (i.e inbreed)
-    But would be easy enough to change. 
+    Compute population counts. 
+    If the population is inbred, we pick a random allele.  
     """
     npop=len(data["POPS"])
     pops=data["POPS"]
@@ -22,9 +22,13 @@ def population_count(data):
         count_0=np.sum(sub_data==0, axis=1)
         count_1=np.sum(sub_data==1, axis=1)
         count_2=np.sum(sub_data==2, axis=1)
-        count_ps_1=np.array([np.random.binomial(c1, 0.5) if c1>0 else 0 for c1 in count_1])
-        count[:,j]=count_ps_1+count_2
-        total[:,j]=count_0+count_1+count_2
+        if pop in inbred:
+            count_ps_1=np.array([np.random.binomial(c1, 0.5) if c1>0 else 0 for c1 in count_1])
+            count[:,j]=count_ps_1+count_2
+            total[:,j]=count_0+count_1+count_2
+        else:
+            count[:,j]=count_1+2*count_2
+            total[:,j]=2*(count_0+count_1+count_2)
             
     bad=(total<2).any(axis=1)
     count=count[~bad]
