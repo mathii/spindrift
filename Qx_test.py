@@ -18,17 +18,17 @@ class Qx_test:
     """
 
     N_COVARIANCE_SNPS=10000      # Number of snps to sample to estimate the covariance but... 
-    MAX_FRAC_RESAMPLE=2            # ...sample at most 1/this proportion of snps
+    MAX_FRAC_RESAMPLE=10           # ...sample at most 1/this proportion of snps
     N_FREQ_BINS=20                 # Number of bins to sample from.  
     
     def __init__(self, effects, data):
-        self.effects=effects.effects.copy()   # copied
-        self.data=data                        # Not copied - TODO make this a class
-        self._n_cov_snps=max(self.N_COVARIANCE_SNPS, len(data["POS"])//self.MAX_FRAC_RESAMPLE)
+        self.effects=effects.effects.copy()   # copied to make bootstrapping easier
+        self.data=data                        # Not copied
+        self._n_cov_snps=max(self.N_COVARIANCE_SNPS, 
+                             len(data.snp)//self.MAX_FRAC_RESAMPLE)
         
         self.filter_effects_against_data()
         self.augment_effects() 
-
         self.data_bins=self.data_frequency_bins()
         
     def copy(self):
@@ -40,23 +40,18 @@ class Qx_test:
         
     def filter_effects_against_data(self):
         """
-        Take a dataset (Todo: change the dataset object to a class) and
+        Take a dataset and
         filter out all the snps that are not in the dataset. Also flip the
         alleles so that the EFFECT alelles is the REF allele 
         """
 
         # First, filter alleles: 
-        data=self.data
-        dt=np.dtype([("CHR", np.str_, 2), ("POS", np.int32), ("REF", np.str_, 1),
-                      ("ALT", np.str_, 1)])
-        data_positions=np.array(zip(data["CHR"], data["POS"], data["REF"],
-                                    data["ALT"]), dtype=dt)
-
-        new_effects=nprec.join_by(["CHR", "POS"], self.effects, data_positions,
-                                       usemask=False, jointype="inner")
+        new_effects=nprec.join_by(["CHR", "POS"], self.effects, 
+                                  self.data.snp[["CHR", "POS", "REF", "ALT"]],
+                                  usemask=False, jointype="inner")
 
         print( "Removed "+str(len(self.effects)-len(new_effects))+
-               " effects not in data",file=sys.stderr)
+               " effect SNPS not in data",file=sys.stderr)
 
         flipped=0
         removed=0
@@ -84,12 +79,13 @@ class Qx_test:
         """
         Add the population frequency information to the effects. 
         """
-        data=self.data
-        npop=len(data["POPS"])
-        dt=np.dtype([("CHR", np.str_, 2), ("POS", np.int32), ("FREQ", np.float, (npop,))])
-        data_positions=np.array(zip(data["CHR"], data["POS"], data["FREQ"]), dtype=dt)
+
+        tmp_snp=nprec.append_fields(self.data.snp, "FREQ", None, 
+                                    dtypes=[(float,self.data.freq.shape[1])],
+                                    usemask=False)
+        tmp_snp["FREQ"]=self.data.freq
         
-        new_effects=nprec.join_by(["CHR", "POS"], self.effects, data_positions,
+        new_effects=nprec.join_by(["CHR", "POS"], self.effects, tmp_snp,
                                   usemask=False, jointype="inner")
 
         self.effects=new_effects
@@ -119,7 +115,7 @@ class Qx_test:
         """
         The matrix which mean centers and scales the allele frequencies
         """
-        M=len(self.data["POPS"])
+        M=len(self.data.pops)
         T=np.zeros((M-1,M), dtype=float)-1/M
         np.fill_diagonal(T, (M-1)/M)
         return T
@@ -135,7 +131,7 @@ class Qx_test:
         Z=self.genetic_values()
         Zp=T.dot(np.expand_dims(Z, axis=1))
         VA=self.scaling_factor()
-        F=drift.estimate_covariance(self.sample_snp_freq(self._n_cov_snps))
+        F=drift.estimate_covariance(self.sample_snp_freq(self._n_cov_snps, match=False))
         C=np.linalg.cholesky(F)
 
         X=np.linalg.inv(C).dot(Zp)/np.sqrt(VA)
@@ -152,7 +148,7 @@ class Qx_test:
         print("Running Qx test", file=sys.stderr)
         Z=self.genetic_values()
         print("\nGenetic values:\n"+ 
-              "\n".join([x+" : "+str(y) for x,y in zip(self.data["POPS"], Z)]), file=sys.stderr)
+              "\n".join([x+" : "+str(y) for x,y in zip(self.data.pops, Z)]), file=sys.stderr)
 
         Qx=self.Qx()
         print("\nQx = %2.3f"%(Qx), file=sys.stdout)
@@ -175,7 +171,7 @@ class Qx_test:
                 np.savetxt(f, boots)
             if MATPLOTLIB_AVAILABLE:
                 self.plot_bootstrap_hist(boots, X2df, Qx, bootp, output_root+".Qx.boot.pdf",
-                                         ",".join(self.data["POPS"]))
+                                         ",".join(self.data.pops))
                 
 ###########################################################################
 
@@ -223,7 +219,7 @@ class Qx_test:
         """
         bins=self.N_FREQ_BINS
         breaks=np.arange(0,bins+1.)/bins
-        data_freq=np.mean(np.array(self.data["FREQ"]), axis=1)
+        data_freq=np.mean(self.data.freq, axis=1)
         IDS=[None]*bins
         for i in range(bins):
             IDS[i]=np.where(np.logical_and(data_freq>breaks[i], data_freq<breaks[i+1]))[0]
@@ -237,14 +233,12 @@ class Qx_test:
         match the frequencies to the distribution effect frequencies 
         defined by the data_frequency_bins.
         """
-        data=self.data["FREQ"]
-        G=np.array(data, dtype=float)
+        G=self.data.freq
 
         if match:
             eff_bins=self.effect_frequency_bin_counts()
             if len(eff_bins)!=self.N_FREQ_BINS or len(self.data_bins)!=self.N_FREQ_BINS:
                 raise Exception("Length of effect bins does not match length of data bins")
-            
             new_ids=np.zeros(K, dtype=int)
             new_bins=np.random.choice(self.N_FREQ_BINS, K, p=eff_bins, replace=True)
             for k in range(K):

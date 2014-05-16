@@ -2,11 +2,10 @@
 
 from __future__ import division, print_function
 import numpy as np
-import pdb
 import sys, getopt
-import drift, effects, Qx_test
-import spindrift_io as io
+import drift, effects, Qx_test, snp_data
 from scipy import stats
+import pdb
 
 ###########################################################################
 
@@ -39,19 +38,12 @@ def parse_options():
     print(options, file=sys.stderr)
 
     return options
-
-###########################################################################
-
    
 ###########################################################################
 
 def main(options):
     # Load population data - TODO: Move all this to an eigenstrat class
-    data=io.read_eigenstrat(options["data"], options["pops"])
-    drift.population_count(data, options["inbred"])
-    drift.remove_monomorphic(data)
-    drift.population_freq(data)
-    del(data["GT"])                       # Save memory
+    data=snp_data.eigenstrat_data(options["data"], options["pops"], True, options["inbred"])
 
     # Load gwas data
     gwas=effects.effects(options["gwas"])
