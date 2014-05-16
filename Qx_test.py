@@ -262,7 +262,16 @@ class Qx_test:
 
         return stats 
 
+###########################################################################
 
+    def output_effects(self, file_root):
+        """
+        Write the used effects to a file. 
+        """
+        np.savetxt(file_root+".Qx.used.txt",
+                   self.effects[["CHR", "POS", "EFFECT", "OTHER", "BETA"]],
+                   fmt="%s\t%d\t%s\t%s\t%f")
+        
 ###########################################################################
 # END CLASS
 

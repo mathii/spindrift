@@ -17,11 +17,13 @@ def parse_options():
     inbred: Comma separated list of pops that might be inbred
     nboot: Number of bootstrap replicates. 
     """
-    options ={ "data":"", "gwas":"", "pops":[], "inbred":[], "nboot":1000, "out":None}
+    options ={ "data":"", "gwas":"", "pops":[], "inbred":[],
+               "nboot":1000, "out":None, "used":False}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "d:g:p:n:o:i:",
-                                   ["data", "gwas", "pops", "nboot", "out", "inbred"])
+        opts, args = getopt.getopt(sys.argv[1:], "d:g:p:n:o:i:u",
+                                   ["data", "gwas", "pops", "nboot", "out", 
+                                    "inbred", "used"])
     except Exception as err:
         print(str(err))
         sys.exit()
@@ -33,6 +35,7 @@ def parse_options():
         elif o in ["-p","--pops"]:       options["pops"] = a.split(",")
         elif o in ["-i","--inbred"]:     options["inbred"] = a.split(",")
         elif o in ["-n","--nboot"]:      options["nboot"] = int(a)
+        elif o in ["-u","--used"]:       options["used"] = True
 
     print("found options:", file=sys.stderr)
     print(options, file=sys.stderr)
@@ -50,7 +53,9 @@ def main(options):
 
     test=Qx_test.Qx_test(gwas, data)
     Qx=test.test( output_root=options["out"], nboot=options["nboot"])
-   
+    if options["used"]:
+        test.output_effects(options["out"])
+    
     return
 
 ###########################################################################

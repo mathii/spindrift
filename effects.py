@@ -34,6 +34,6 @@ class effects:
             print( "Read "+str(num_lines)+ " effect lines", file=sys.stderr)
         else:
             raise Exception("Unexpected number of lines")
-
+        
 ###########################################################################
 # END CLASS
