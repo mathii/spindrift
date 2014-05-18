@@ -35,6 +35,7 @@ class snp_data:
         if no_gt:                     # Only keep the genotypes if we want them
             del self.geno
         self.remove_monomorphic()
+        self.remove_sparse()
         self.add_population_freqs()
 
     def load(self, file_root, pops):
@@ -67,16 +68,64 @@ class snp_data:
                 count[:,j]=count_1+2*count_2
                 total[:,j]=2*(count_0+count_1+count_2)
             
-        bad=(total<2).any(axis=1)
-        count=count[~bad]
-        total=total[~bad]
+
+        self.count=count
+        self.total=total
+
+    def check(self):
+        """
+        Check that everything is the right shape and so on
+        """
+        NSNP=self.snp.shape[0]
+        NPOP=len(self.pops)
+        NIND=len(self.ind)
+
+        if hasattr(self, "count"):
+            if self.count.shape[0]!=NSNP:
+                raise Exception("Count has wrong number of snps")
+            if self.count.shape[1]!=NPOP:
+                raise Exception("Count has wrong number of populations")
+            if self.count.shape!=self.total.shape:
+                raise Exception("Count and total out of shape")
+
+        if hasattr(self, "geno"):
+            if self.geno.shape[0]!=NSNP:
+                raise Exception("Genotype has wrong number of snps")
+            if self.geno.shape[0]!=NIND:
+                raise Exception("Genotype has wrong number of individuals")
+
+        if hasattr(self, "freq"):
+            if self.freq.shape[0]!=NSNP:
+                raise Exception("Frequency has wrong number of snps")
+            if self.freq.shape[1]!=NPOP:
+                raise Exception("Frequency has wrong number of populations")
+
+    def filter_snps(self, include):
+        """
+        Include should be a numpy vector of length equal to 
+        the number of snps - boolean, defines whether the 
+        SNPs are retained. 
+        """
+        self.snp=self.snp[include]
+        self.count=self.count[include,:]
+        self.total=self.total[include,:]
+        if hasattr(self, "geno"):
+            self.geno=self.geno[include,:]
+
+        self.check()
+        
+    def remove_sparse(self, n=2):
+        """
+        Remove any snps with less that n alleles in any population
+        i.e too much missing data. 
+        """
+        bad=(self.total<n).any(axis=1)
+        self.filter_snps(~bad)
+        
         print("Removed " +str(sum(bad)) + 
               " SNPs with <2 alleles in one population", 
               file=sys.stderr)
 
-        self.count=count
-        self.total=total
-        
     def remove_monomorphic(self):
         """
         Remove monomorphic snps - have to have compuated counts
@@ -84,12 +133,7 @@ class snp_data:
         monomorphic = np.logical_or(np.all(self.count==0, axis=1),   
                                     np.all(self.count==self.total, axis=1))
 
-        self.snp=self.snp[~monomorphic]
-        self.count=self.count[~monomorphic,:]
-        self.total=self.total[~monomorphic,:]
-        if hasattr(self, "geno"):
-            self.geno=self.geno[~monomorphic,:]
-    
+        self.filter_snps(~monomorphic)
         print("Removed "+str(sum(monomorphic))+" monomorphic SNPs", file=sys.stderr)
 
 

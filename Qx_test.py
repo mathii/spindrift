@@ -22,6 +22,7 @@ class Qx_test:
     N_FREQ_BINS=20                 # Number of bins to sample from.  
     
     def __init__(self, effects, data):
+        data.check()
         self.effects=effects.effects.copy()   # copied to make bootstrapping easier
         self.data=data                        # Not copied
         self._n_cov_snps=max(self.N_COVARIANCE_SNPS, 
@@ -87,7 +88,6 @@ class Qx_test:
         
         new_effects=nprec.join_by(["CHR", "POS"], self.effects, tmp_snp,
                                   usemask=False, jointype="inner")
-
         self.effects=new_effects
 
 ###########################################################################
