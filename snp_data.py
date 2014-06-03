@@ -20,7 +20,7 @@ class snp_data:
     virtual base class - derived classes need to implement 
     the load function. 
     """
-    def __init__(self, file_root, pops=None, no_gt=True, inbred=[]):
+    def __init__(self, file_root, pops=None, no_gt=True, inbred=[], sparse=2):
         """
         File root is the root of an eigenstrat file. 
         """
@@ -35,7 +35,8 @@ class snp_data:
         if no_gt:                     # Only keep the genotypes if we want them
             del self.geno
         self.remove_monomorphic()
-        self.remove_sparse()
+        if sparse:
+            self.remove_sparse(n=sparse)
         self.add_population_freqs()
 
     def load(self, file_root, pops):
@@ -111,6 +112,8 @@ class snp_data:
         self.total=self.total[include,:]
         if hasattr(self, "geno"):
             self.geno=self.geno[include,:]
+        if hasattr(self, "freq"):
+            self.freq=self.freq[include,:]
 
         self.check()
         
@@ -123,7 +126,7 @@ class snp_data:
         self.filter_snps(~bad)
         
         print("Removed " +str(sum(bad)) + 
-              " SNPs with <2 alleles in one population", 
+              " SNPs with <" + str(n) + " alleles in one population", 
               file=sys.stderr)
 
     def remove_monomorphic(self):
@@ -175,21 +178,8 @@ class eigenstrat_data(snp_data):
             pops=np.unique(ind["POP"])
             
         # Read .snp file
-        snp_file=open(file_root+".snp", "r")
-        line=snp_file.readline()
-        bits=line.split()
-        snpdt=dt_snp1                     # does the snp file have the alleles in?
-        snpcol=(0,1,3)
-        if len(bits) not in [4,6]:
-            raise Exception("Could not read snp file")
-        elif len(bits)==6:
-            snpdt=dt_snp2
-            snpcol=(0,1,3,4,5)
-
-        snp_file.seek(0)
-        snp=np.genfromtxt(snp_file, dtype=snpdt, usecols=snpcol)
-        snp_file.close()
-
+        snp=load_snp_file(file_root)
+        
         # Finally, read .geno file
         geno=np.genfromtxt(file_root+".geno", dtype='i1', delimiter=1, 
                            usecols=np.where(include)[0])
@@ -198,3 +188,25 @@ class eigenstrat_data(snp_data):
         
 ###########################################################################
 # END CLASS
+
+def load_snp_file(file_root):
+    """
+    Load a .snp file into the right format. 
+    """
+    snp_file=open(file_root+".snp", "r")
+    line=snp_file.readline()
+    bits=line.split()
+    snpdt=dt_snp1                     # does the snp file have the alleles in?
+    snpcol=(0,1,3)
+    if len(bits) not in [4,6]:
+        raise Exception("Could not read snp file")
+    elif len(bits)==6:
+        snpdt=dt_snp2
+        snpcol=(0,1,3,4,5)
+            
+    snp_file.seek(0)
+    snp=np.genfromtxt(snp_file, dtype=snpdt, usecols=snpcol)
+    snp_file.close()
+    return snp
+
+###########################################################################
