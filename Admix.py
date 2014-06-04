@@ -27,7 +27,7 @@ def parse_options():
     for o, a in opts:
         if o in ["-d","--data"]:         options["data"] = a
         elif o in ["-o","--out"]:        options["out"] = a
-        elif o in ["-i","--inbred"]:     options["inbred"] = a.split(",")
+        elif o in ["-i","--inbred"]:     options["inbred"] = parse_pops(a)
         elif o in ["-1","--1"]:          options["1"] = a
         elif o in ["-2","--2"]:          options["2"] = a
         elif o in ["-3","--3"]:          options["3"] = a

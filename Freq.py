@@ -5,6 +5,7 @@ import numpy as np
 import sys, getopt
 import snp_data
 from scipy import stats
+from parse import parse_pops
 import pdb
 
 ###########################################################################
@@ -30,8 +31,8 @@ def parse_options():
         if o in ["-d","--data"]:         options["data"] = a
         elif o in ["-o","--out"]:        options["out"] = a
         elif o in ["-s","--snps"]:        options["snps"] = a
-        elif o in ["-p","--pops"]:       options["pops"] = a.split(",")
-        elif o in ["-i","--inbred"]:     options["inbred"] = a.split(",")
+        elif o in ["-p","--pops"]:       options["pops"] = parse_pops(a)
+        elif o in ["-i","--inbred"]:     options["inbred"] = parse_pops(a)
 
     print("found options:", file=sys.stderr)
     print(options, file=sys.stderr)
@@ -75,7 +76,7 @@ def main(options):
     # Load population data - TODO: Move all this to an eigenstrat class
     data=snp_data.eigenstrat_data(options["data"], options["pops"], 
                                   True, options["inbred"], sparse=0)
-    
+    pdb.set_trace()
     snps=snp_data.load_snp_file(options["snps"])
     include=np.in1d(data.snp, snps)
     data.filter_snps(include)

@@ -32,8 +32,8 @@ def parse_options():
         if o in ["-d","--data"]:         options["data"] = a
         elif o in ["-o","--out"]:        options["out"] = a
         elif o in ["-g","--gwas"]:       options["gwas"] = a
-        elif o in ["-p","--pops"]:       options["pops"] = a.split(",")
-        elif o in ["-i","--inbred"]:     options["inbred"] = a.split(",")
+        elif o in ["-p","--pops"]:       options["pops"] = parse_pops(a)
+        elif o in ["-i","--inbred"]:     options["inbred"] = parse_pops(a)
         elif o in ["-n","--nboot"]:      options["nboot"] = int(a)
         elif o in ["-u","--used"]:       options["used"] = True
 
