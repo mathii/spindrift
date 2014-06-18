@@ -20,19 +20,14 @@ class snp_data:
     virtual base class - derived classes need to implement 
     the load function. 
     """
-    def __init__(self, file_root, pops=None, no_gt=True, inbred=[], sparse=2):
+    def __init__(self, file_root, pops=None, no_gt=True, inbred=[], sparse=2, snps=None):
         """
         File root is the root of an eigenstrat file. 
         """
-        ind, snp, geno, pops=self.load(file_root, pops)
-
-        self.ind=ind
-        self.snp=snp
-        self.pops=pops
-        self.geno=geno
+        self.load(file_root, pops, snps)
 
         self.add_population_counts(inbred=inbred)
-        if no_gt:                     # Only keep the genotypes if we want them
+        if hasattr(self, "geno") and no_gt:  # Only keep the genotypes if we want them
             del self.geno
         self.remove_monomorphic()
         if sparse:
@@ -162,34 +157,87 @@ class eigenstrat_data(snp_data):
     Unpacked Eigenstrat data
     """
         
-    def load(self, file_root, pops=None):
+    def load(self, file_root, pops=None, snps=None):
         """
         Load from an unpacked eigenstrat file into our internal format.
         If pops is specified then load only the specified populations. 
         """
         # Read .ind file
-        ind=np.genfromtxt(file_root+".ind", dtype=dt_ind, usecols=(0,2))   # ignore sex
-
-        include=np.ones(len(ind), dtype=bool)
-        if pops:
-            include=np.in1d(ind["POP"], pops)
-            ind=ind[include]
-        else:
-            pops=np.unique(ind["POP"])
-            
+        ind,pops,include=load_ind_file(file_root, pops)    
         # Read .snp file
-        snp=load_snp_file(file_root)
+        snp,snp_include=load_snp_file(file_root, snps)
         
         # Finally, read .geno file
         geno=np.genfromtxt(file_root+".geno", dtype='i1', delimiter=1, 
                            usecols=np.where(include)[0])
+        geno=geno[snp_include,:]
 
-        return ind,snp,geno,pops
-        
+        self.ind=ind
+        self.snp=snp
+        self.pops=pops
+        self.geno=geno
+
 ###########################################################################
 # END CLASS
 
-def load_snp_file(file_root):
+class read_data(snp_data):
+    """
+    This class has read-level data, and generates genotypes from that. 
+    """
+
+    def load(self, file_root, pops=None, snps=None):
+        """
+        This loads in data in Nick Patternson's snp .ans format.
+        Load, but look for a .ans file instead of a .geno file.
+        9 Columns: SNPID, chr, pos, ref, alt, "::"? SampleID ref alt reads
+        """
+        # Read .ind file
+        ind,pops,include=load_ind_file(file_root, pops)    
+        # Read .snp file
+        snp,snp_include=load_snp_file(file_root, snps)
+        # Read .ans file (nickformat)
+        ans=load_ans_file(file_root, snp, ind)
+
+        alt_count=np.zeros((len(snp), len(ind)), dtype=int)
+        ref_count=alt_count.copy()
+
+        print("Bypassing allele checks", file=sys.stderr)
+        print("Warning: Flipping all alleles to .ans", file=sys.stderr)
+
+        for i_s,s in enumerate(snp):
+            for i_i,i in enumerate(ind["IND"]):
+                # if ans[s["ID"]][i]["ref"]!=s["REF"]:
+                #     pdb.set_trace()
+                #     raise Exception("Reference allele mismatch for %s"%(s["ID"]))
+                # if ans[s["ID"]][i]["alt"]!=s["ALT"]:
+                #     raise Exception("Alternative allele mismatch for %s"%(s["ID"]))
+                s["REF"]=ans[s["ID"]][i]["ref"]
+                s["ALT"]=ans[s["ID"]][i]["alt"]
+                alt_count[i_s,i_i]=ans[s["ID"]][i]["alt_ct"]
+                ref_count[i_s,i_i]=ans[s["ID"]][i]["ref_ct"]
+
+        self.ind=ind
+        self.snp=snp
+        self.pops=pops
+        self.alt_count=alt_count
+        self.ref_count=ref_count
+
+ 
+
+    # TODO: add count/freq handlers to this class. 
+    def add_population_freqs(self):
+        pass
+
+    def add_population_counts(self, inbred=[]):
+        pass
+
+    def remove_monomorphic(self):
+        pass
+    
+###########################################################################
+# END CLASS
+
+def load_snp_file(file_root, snps=None):
     """
     Load a .snp file into the right format. 
     """
@@ -207,6 +255,53 @@ def load_snp_file(file_root):
     snp_file.seek(0)
     snp=np.genfromtxt(snp_file, dtype=snpdt, usecols=snpcol)
     snp_file.close()
-    return snp
 
+    snp_include=np.ones(len(snp), dtype=bool)
+    if snps is not None:
+        snp_include=np.in1d(snp["ID"], snps)
+        snp=snp[snp_include]
+        
+    return snp,snp_include
+
+###########################################################################
+
+def load_ind_file(file_root, pops=None):
+    """
+    Load a .ind file, restricting to individuals in the specified
+    populations. 
+    """
+    ind=np.genfromtxt(file_root+".ind", dtype=dt_ind, usecols=(0,2))   # ignore sex
+
+    include=np.ones(len(ind), dtype=bool)
+    if pops:
+        include=np.in1d(ind["POP"], pops)
+        ind=ind[include]
+    else:
+        pops=np.unique(ind["POP"])
+
+    return ind,pops,include
+
+###########################################################################
+
+def load_ans_file(file_root, snp, ind):
+    """
+    Load the ans file into a dict data structure for fast lookup. Load
+    only those snps and individuals included
+    """
+    snp_inc=set(snp["ID"])
+    ind_inc=set(ind["IND"])
+    ans={}
+    ans_file=open(file_root+".ans", "r")
+    for line in ans_file:
+        snp,chr,pos,ref,alt,dd,ind,ref_ct,alt_ct=line.split()
+        if snp not in snp_inc:
+            continue
+        if snp not in ans:
+            ans[snp]={}
+        if ind in ind_inc:   
+            ans[snp][ind]={"ref":ref, "alt":alt, "ref_ct":int(ref_ct), "alt_ct":int(alt_ct)}
+
+    ans_file.close()
+    return ans
+        
 ###########################################################################

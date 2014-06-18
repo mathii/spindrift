@@ -74,13 +74,11 @@ def output_frequencies(data, out):
 
 def main(options):
     # Load population data - TODO: Move all this to an eigenstrat class
+    snps,snp_include=snp_data.load_snp_file(options["snps"])
     data=snp_data.eigenstrat_data(options["data"], options["pops"], 
-                                  True, options["inbred"], sparse=0)
-    pdb.set_trace()
-    snps=snp_data.load_snp_file(options["snps"])
-    include=np.in1d(data.snp, snps)
-    data.filter_snps(include)
-
+                                  True, options["inbred"], sparse=0, 
+                                  snps=snps["ID"])
+    
     output_frequencies(data, options["out"])
     return
 
