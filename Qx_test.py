@@ -21,7 +21,7 @@ class Qx_test:
     MAX_FRAC_RESAMPLE=10           # ...sample at most 1/this proportion of snps
     N_FREQ_BINS=20                 # Number of bins to sample from.  
     
-    def __init__(self, effects, data):
+    def __init__(self, effects, data, match=False):
         data.check()
         self.effects=effects.effects.copy()   # copied to make bootstrapping easier
         self.data=data                        # Not copied
@@ -31,6 +31,7 @@ class Qx_test:
         self.filter_effects_against_data()
         self.augment_effects() 
         self.data_bins=self.data_frequency_bins()
+        self.match=match
         
     def copy(self):
         new=copy.copy(self)               
@@ -123,7 +124,7 @@ class Qx_test:
     
 ###########################################################################
 
-    def Qx(self):
+    def Qx(self, verbose=False):
         """
         Calculate the test statistic
         """
@@ -131,9 +132,12 @@ class Qx_test:
         Z=self.genetic_values()
         Zp=T.dot(np.expand_dims(Z, axis=1))
         VA=self.scaling_factor()
-        F=drift.estimate_covariance(self.sample_snp_freq(self._n_cov_snps, match=False))
+        F=drift.estimate_covariance(self.sample_snp_freq(self._n_cov_snps, match=self.match))
         C=np.linalg.cholesky(F)
 
+        if verbose:
+            print("\nCovariance\n"+str(F)+"\n", file=sys.stderr)
+        
         X=np.linalg.inv(C).dot(Zp)/np.sqrt(VA)
         Qx=sum(X*X)[0]
         return Qx
@@ -150,7 +154,7 @@ class Qx_test:
         print("\nGenetic values:\n"+ 
               "\n".join([x+" : "+str(y) for x,y in zip(self.data.pops, Z)]), file=sys.stderr)
 
-        Qx=self.Qx()
+        Qx=self.Qx(verbose=True)
         print("\nQx = %2.3f"%(Qx), file=sys.stdout)
         
         X2df = len(Z)-1

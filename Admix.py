@@ -46,7 +46,7 @@ def main(options):
     data=snp_data.eigenstrat_data(options["data"], options["pops"], 
                                   True, options["inbred"], 0)
 
-    test=Admix_estimate.patterson_estimator(data)
+    test=Admix_estimate.patterson_estimator(data, np.array([options[x] for x in ["1", "2", "3"]]))
     test.estimate_admix()
     return
 

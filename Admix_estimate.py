@@ -30,7 +30,7 @@ class patterson_estimator:
     assuming that the reference alelle is the ancestral allele. 
     """
 
-    def __init__(self, data):
+    def __init__(self, data, order):
         """
         Not much
         """
@@ -38,6 +38,7 @@ class patterson_estimator:
         if not len(data.pops)==3:
             raise Exception("Patterson estimator needs exactly three populations")
         self.data=data
+        self.order=order
 
     def estimate_admix(self):
         """
@@ -47,7 +48,15 @@ class patterson_estimator:
         """
 
         p=1-self.data.freq                # Derived allele frequency
+        pops=self.data.pops
 
+        idx=[]
+        for ip in pops: idx.append(np.where(self.order==ip)[0][0])
+        idx=np.array(idx)
+
+        pops=pops[idx]
+        p=p[:,idx]
+                
         w1=2*p[:,0]*(1-p[:,0])*p[:,1]     # 01||1
         w2=2*p[:,1]*(1-p[:,1])*p[:,0]     # 1||01
         w3=4*p[:,0]*(1-p[:,0])*p[:,1]*(1-p[:,1])     # 01||01
@@ -66,8 +75,8 @@ class patterson_estimator:
         else:
             raise Exception("Root finder and least square fit both failed to converge")
 
-        print( "\nFor %s = a %s + (1-a) %s\n"%(self.data.pops[2], self.data.pops[0],
-                                               self.data.pops[1]), file=sys.stderr)
+        print( "\nFor %s = a %s + (1-a) %s\n"%(pops[2], pops[0],
+                                               pops[1]), file=sys.stderr)
         print("a = %1.4f\np1= %1.4f\nt1= %1.4f\n"%tuple(pars), file=sys.stderr)
 
         pdb.set_trace()
