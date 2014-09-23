@@ -4,7 +4,7 @@ from __future__ import division, print_function
 import numpy as np
 import sys, getopt
 import Admix_estimate, snp_data
-import pdb
+from parse import parse_pops
 
 ###########################################################################
 
@@ -18,7 +18,7 @@ def parse_options():
                "out":"out"}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "d:1:2:3:i:o:",
+        opts, args = getopt.getopt(sys.argv[1:], "d:1:2:3:i:o:",  # @UnusedVariable
                                    ["data", "1", "2", "3", "inbred", "out"])
     except Exception as err:
         print(str(err))
