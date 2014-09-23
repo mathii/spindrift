@@ -153,6 +153,8 @@ class Qx_test:
         """
         print("Qx test: "+",".join(self.data.pops), file=sys.stderr)
         Z=self.genetic_values()
+        print("N cov estimate snps="+str(self._n_cov_snps), file=sys.stderr)
+        
         print("\nGenetic values:\n"+ 
               "\n".join([x+" : "+str(y) for x,y in zip(self.data.pops, Z)]), file=sys.stderr)
 
@@ -251,9 +253,10 @@ class Qx_test:
             if len(eff_bins)!=self.N_FREQ_BINS or len(self.data_bins)!=self.N_FREQ_BINS:
                 raise Exception("Length of effect bins does not match length of data bins")
             new_ids=[]
-            new_bin_counts=np.random.multinomial(K, eff_bins/sum(eff_bins))
+            new_bin_counts=np.random.multinomial(K, eff_bins)
             for ibin in range(self.N_FREQ_BINS):
-                new_ids.append(np.random.choice(self.data_bins[ibin], new_bin_counts[ibin]))
+                if new_bin_counts[ibin]>0:
+                    new_ids.append(np.random.choice(self.data_bins[ibin], new_bin_counts[ibin]))
             sample=G[np.concatenate(new_ids),:]
             return sample
         else:
