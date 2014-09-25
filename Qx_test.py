@@ -21,10 +21,11 @@ class Qx_test:
     MAX_FRAC_RESAMPLE=10           # ...sample at most 1/this proportion of snps
     N_FREQ_BINS=20                 # Number of bins to sample from.  
     
-    def __init__(self, effects, data):
+    def __init__(self, effects, data, center=[]):
         data.check()
         self.effects=effects.effects.copy()   # copied to make bootstrapping easier
         self.data=data                        # Not copied
+        self.center=np.array(center)          # Which pops to center the allele frequencies.
         self._n_cov_snps=max(self.N_COVARIANCE_SNPS, 
                              len(data.snp)//self.MAX_FRAC_RESAMPLE)
         
@@ -118,6 +119,17 @@ class Qx_test:
         M=len(self.data.pops)
         T=np.zeros((M-1,M), dtype=float)-1/M
         np.fill_diagonal(T, (M-1)/M)
+
+        T=np.identity(M)
+        which_center=np.ones(M, dtype=np.bool)
+        C=M
+        if self.center.size:
+            which_center=np.in1d(np.array(self.data.pops), self.center)
+            C=len(self.center)
+
+        first_center=np.where(which_center)[0][0]
+        T=np.delete(T, first_center, axis=0)
+        T[:,which_center]-= 1/C
         return T
 
     
@@ -131,11 +143,11 @@ class Qx_test:
         Z=self.genetic_values()
         Zp=T.dot(np.expand_dims(Z, axis=1))
         VA=self.scaling_factor()
-        F=drift.estimate_covariance(self.sample_snp_freq(self._n_cov_snps, match=False))
+        F=drift.estimate_covariance(self.sample_snp_freq(self._n_cov_snps, match=True), T)
         C=np.linalg.cholesky(F)
-
         X=np.linalg.inv(C).dot(Zp)/np.sqrt(VA)
         Qx=sum(X*X)[0]
+        # pdb.set_trace()
         return Qx
         
 ###########################################################################
@@ -143,7 +155,6 @@ class Qx_test:
     def test(self, output_root=None, nboot=None):
         """
         Actually run the test, compute p-values. 
-        TODO: add option method=exact/bootstrap
         """
         print("Running Qx test", file=sys.stderr)
         Z=self.genetic_values()
@@ -167,6 +178,7 @@ class Qx_test:
         if output_root:
             with open(output_root + ".Qx.stat.txt", "w") as f:
                 f.write(str(Qx))
+        if output_root and nboot:
             with open(output_root + ".Qx.boot.txt", "w") as f:
                 np.savetxt(f, boots)
             if MATPLOTLIB_AVAILABLE:

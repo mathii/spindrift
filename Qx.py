@@ -3,7 +3,7 @@
 from __future__ import division, print_function
 import numpy as np
 import sys, getopt
-import drift, effects, Qx_test, snp_data
+import drift, effects, Qx_test, snp_data, parse
 from scipy import stats
 import pdb
 
@@ -15,15 +15,16 @@ def parse_options():
     gwas: Gwas data. 3-col: CHR, POS, EFFECT
     pops: Comma separated list of populations to include
     inbred: Comma separated list of pops that might be inbred
+    center: Populations to center allele frequency around. 
     nboot: Number of bootstrap replicates. 
     """
     options ={ "data":"", "gwas":"", "pops":[], "inbred":[],
-               "nboot":1000, "out":None, "used":False}
+               "nboot":1000, "out":None, "used":False, "center":[]}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "d:g:p:n:o:i:u",
+        opts, args = getopt.getopt(sys.argv[1:], "d:g:p:n:o:i:uc:",
                                    ["data", "gwas", "pops", "nboot", "out", 
-                                    "inbred", "used"])
+                                    "inbred", "used", "center"])
     except Exception as err:
         print(str(err))
         sys.exit()
@@ -32,8 +33,9 @@ def parse_options():
         if o in ["-d","--data"]:         options["data"] = a
         elif o in ["-o","--out"]:        options["out"] = a
         elif o in ["-g","--gwas"]:       options["gwas"] = a
-        elif o in ["-p","--pops"]:       options["pops"] = parse_pops(a)
-        elif o in ["-i","--inbred"]:     options["inbred"] = parse_pops(a)
+        elif o in ["-p","--pops"]:       options["pops"] = parse.parse_pops(a)
+        elif o in ["-i","--inbred"]:     options["inbred"] = parse.parse_pops(a)
+        elif o in ["-c","--center"]:     options["center"] = parse.parse_pops(a)
         elif o in ["-n","--nboot"]:      options["nboot"] = int(a)
         elif o in ["-u","--used"]:       options["used"] = True
 
@@ -51,12 +53,12 @@ def main(options):
     # Load gwas data
     gwas=effects.effects(options["gwas"])
 
-    test=Qx_test.Qx_test(gwas, data)
+    test=Qx_test.Qx_test(gwas, data, options["center"])
     Qx=test.test( output_root=options["out"], nboot=options["nboot"])
     if options["used"]:
         test.output_effects(options["out"])
-    
-    return
+
+        return
 
 ###########################################################################
 

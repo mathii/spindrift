@@ -18,11 +18,11 @@ def parse_options():
     snps: List of snps (in .snp format)
     out: root of output file. 
     """
-    options ={ "data":"", "pops":[], "inbred":[], "snps":"", "out":""}
+    options ={ "data":"", "pops":[], "inbred":[], "snps":"", "out":"", "reads":False}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "d:p:o:i:s:",
-                                   ["data", "pops",  "out", "inbred", "snps"])
+        opts, args = getopt.getopt(sys.argv[1:], "d:p:o:i:s:r",
+                                   ["data", "pops",  "out", "inbred", "snps", "reads"])
     except Exception as err:
         print(str(err))
         sys.exit()
@@ -30,6 +30,7 @@ def parse_options():
     for o, a in opts:
         if o in ["-d","--data"]:         options["data"] = a
         elif o in ["-o","--out"]:        options["out"] = a
+        elif o in ["-r","--reads"]:        options["reads"] = True
         elif o in ["-s","--snps"]:        options["snps"] = a
         elif o in ["-p","--pops"]:       options["pops"] = parse_pops(a)
         elif o in ["-i","--inbred"]:     options["inbred"] = parse_pops(a)
@@ -75,7 +76,12 @@ def output_frequencies(data, out):
 def main(options):
     # Load population data - TODO: Move all this to an eigenstrat class
     snps,snp_include=snp_data.load_snp_file(options["snps"])
-    data=snp_data.eigenstrat_data(options["data"], options["pops"], 
+    if options["reads"]:
+        data=snp_data.read_data(options["data"], options["pops"], 
+                                  True, options["inbred"], sparse=0, 
+                                  snps=snps["ID"])
+    else:
+        data=snp_data.eigenstrat_data(options["data"], options["pops"], 
                                   True, options["inbred"], sparse=0, 
                                   snps=snps["ID"])
     

@@ -84,12 +84,13 @@ class snp_data:
             if self.count.shape!=self.total.shape:
                 raise Exception("Count and total out of shape")
 
-        if hasattr(self, "geno"):
-            if self.geno.shape[0]!=NSNP:
-                raise Exception("Genotype has wrong number of snps")
-            if self.geno.shape[0]!=NIND:
-                raise Exception("Genotype has wrong number of individuals")
-
+        for what in ["geno", "alt_count", "ref_count"]:
+            if hasattr(self, what):
+                if self.geno.shape[0]!=NSNP:
+                    raise Exception("%s has wrong number of snps"%(what,))
+                if self.geno.shape[1]!=NIND:
+                    raise Exception("%s has wrong number of individuals"%(what,))
+            
         if hasattr(self, "freq"):
             if self.freq.shape[0]!=NSNP:
                 raise Exception("Frequency has wrong number of snps")
@@ -105,10 +106,9 @@ class snp_data:
         self.snp=self.snp[include]
         self.count=self.count[include,:]
         self.total=self.total[include,:]
-        if hasattr(self, "geno"):
-            self.geno=self.geno[include,:]
-        if hasattr(self, "freq"):
-            self.freq=self.freq[include,:]
+        for what in ["geno", "freq", "ref_count", "alt_count"]:
+            if hasattr(self, what):
+                setattr(self, what, getattr(self, what)[include,:])
 
         self.check()
         
@@ -220,17 +220,51 @@ class read_data(snp_data):
         self.snp=snp
         self.pops=pops
         self.alt_count=alt_count
-        self.ref_count=ref_count
-
- 
+        self.ref_count=ref_count 
 
     # TODO: add count/freq handlers to this class. 
     def add_population_freqs(self):
-        pass
+        self.freq=np.true_divide(1.0*self.count, self.total)
 
     def add_population_counts(self, inbred=[]):
-        pass
+        """
+        Add population counts based on the reads. methods should be 
+        max: maximise diversity. het if there are both alleles, hom otherwise.
+        EM: Infer using EM algorithm. Todo. 
+        """
+        print("Adding counts with max diversity method", file=sys.stderr)
+        npop=len(self.pops)
+        count=np.zeros(shape=(self.alt_count.shape[0], npop), dtype=np.dtype('i4'))
+        total=np.zeros(shape=(self.alt_count.shape[0], npop), dtype=np.dtype('i4'))
 
+        for j, pop in enumerate(self.pops):
+            sub_ac=self.alt_count[:,self.ind["POP"]==pop]
+            sub_rc=self.ref_count[:,self.ind["POP"]==pop]
+            if not sub_ac.shape[1]:
+                pass
+            else:
+                this_count=0*sub_ac
+                this_total=0*sub_ac
+                for ki in range(this_count.shape[0]):
+                    for kj in range(this_count.shape[1]):
+                        if sub_ac[ki,kj]+sub_rc[ki,kj]==0:
+                            pass
+                        elif sub_ac[ki,kj]==0:
+                            this_count[ki,kj]=1
+                            this_total[ki,kj]=1
+                        elif sub_rc[ki,kj]==0:
+                            this_count[ki,kj]=0
+                            this_total[ki,kj]=1
+                        else:
+                            this_count[ki,kj]=1
+                            this_total[ki,kj]=2
+
+                count[:,j]=np.sum(this_count, axis=1)
+                total[:,j]=np.sum(this_total, axis=1)
+                pdb.set_trace()
+        self.count=count
+        self.total=total            
+        
     def remove_monomorphic(self):
         pass
     

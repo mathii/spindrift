@@ -1,10 +1,11 @@
 # Functions for doing drift-related calculations. 
 from __future__ import division, print_function
 import numpy as np
+import pdb
 
 ###########################################################################
 
-def estimate_covariance(freq_data):
+def estimate_covariance(freq_data, T):
     """
     Using the notation of the Berg and Coop paper
     """
@@ -13,16 +14,11 @@ def estimate_covariance(freq_data):
 
     M,K = G.shape
 
-    T=np.zeros((M-1,M), dtype=float)-1/M
-    np.fill_diagonal(T, (M-1)/M)
-
-
     eps=np.mean(G, axis=0)
 
     var2=np.expand_dims(1/eps*(1-eps),axis=0)
     TGs=T.dot(G*var2)
     F=TGs.dot(TGs.T)/(K-1)
-
     return F
             
 ###########################################################################
