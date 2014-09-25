@@ -83,7 +83,6 @@ class snp_data:
             if self.count.shape!=self.total.shape:
                 raise Exception("Count and total out of shape")
 
-<<<<<<< HEAD
         for what in ["geno", "alt_count", "ref_count"]:
             if hasattr(self, what):
                 if self.geno.shape[0]!=NSNP:
@@ -91,14 +90,6 @@ class snp_data:
                 if self.geno.shape[1]!=NIND:
                     raise Exception("%s has wrong number of individuals"%(what,))
             
-=======
-        if hasattr(self, "geno"):
-            if self.geno.shape[0]!=NSNP:
-                raise Exception("Genotype has wrong number of snps")
-            if self.geno.shape[1]!=NIND:
-                raise Exception("Genotype has wrong number of individuals")
-
->>>>>>> 9fb155d229ed3a716ba70dbbd41baf08a35a2ca3
         if hasattr(self, "freq"):
             if self.freq.shape[0]!=NSNP:
                 raise Exception("Frequency has wrong number of snps")
@@ -329,7 +320,7 @@ def load_ans_file(file_root, snp, ind):
     ans={}
     ans_file=open(file_root+".ans", "r")
     for line in ans_file:
-        snp,chr,pos,ref,alt,dd,ind,ref_ct,alt_ct=line.split()
+        snp,chrom,pos,ref,alt,dd,ind,ref_ct,alt_ct=line.split()  # @UnusedVariable
         if snp not in snp_inc:
             continue
         if snp not in ans:
