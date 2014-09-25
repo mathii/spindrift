@@ -1,9 +1,9 @@
 from __future__ import division, print_function
 import numpy as np
-import scipy as sp
+from scipy import stats
 import numpy.lib.recfunctions as nprec
 import sys, drift, copy
-import pdb
+
 MATPLOTLIB_AVAILABLE=True
 try:
     import matplotlib.pyplot as plt
@@ -21,7 +21,7 @@ class Qx_test:
     MAX_FRAC_RESAMPLE=10           # ...sample at most 1/this proportion of snps
     N_FREQ_BINS=20                 # Number of bins to sample from.  
     
-    def __init__(self, effects, data, center=[]):
+    def __init__(self, effects, data, center=[], match=True):
         data.check()
         self.effects=effects.effects.copy()   # copied to make bootstrapping easier
         self.data=data                        # Not copied
@@ -32,6 +32,7 @@ class Qx_test:
         self.filter_effects_against_data()
         self.augment_effects() 
         self.data_bins=self.data_frequency_bins()
+        self.match=match
         
     def copy(self):
         new=copy.copy(self)               
@@ -135,7 +136,7 @@ class Qx_test:
     
 ###########################################################################
 
-    def Qx(self):
+    def Qx(self, verbose=False):
         """
         Calculate the test statistic
         """
@@ -143,8 +144,14 @@ class Qx_test:
         Z=self.genetic_values()
         Zp=T.dot(np.expand_dims(Z, axis=1))
         VA=self.scaling_factor()
-        F=drift.estimate_covariance(self.sample_snp_freq(self._n_cov_snps, match=True), T)
+        F=drift.estimate_covariance(self.sample_snp_freq(self._n_cov_snps, match=self.match), T)
         C=np.linalg.cholesky(F)
+
+        if verbose:
+            print("\nTransformed genetic values:\n"+ 
+              "\n".join([x+" : "+str(y) for x,y in zip(self.data.pops, Zp)]), file=sys.stderr)
+            print("\nTransformed covariance\n"+str(F)+"\n", file=sys.stderr)
+        
         X=np.linalg.inv(C).dot(Zp)/np.sqrt(VA)
         Qx=sum(X*X)[0]
         # pdb.set_trace()
@@ -152,20 +159,22 @@ class Qx_test:
         
 ###########################################################################
 
-    def test(self, output_root=None, nboot=None):
+    def test(self, output_file=None, output_root=None, nboot=None):
         """
         Actually run the test, compute p-values. 
         """
-        print("Running Qx test", file=sys.stderr)
+        print("Qx test: "+",".join(self.data.pops), file=sys.stderr)
         Z=self.genetic_values()
+        print("N cov estimate snps="+str(self._n_cov_snps), file=sys.stderr)
+        
         print("\nGenetic values:\n"+ 
               "\n".join([x+" : "+str(y) for x,y in zip(self.data.pops, Z)]), file=sys.stderr)
 
-        Qx=self.Qx()
+        Qx=self.Qx(verbose=True)
         print("\nQx = %2.3f"%(Qx), file=sys.stdout)
         
         X2df = len(Z)-1
-        X2p=1 - sp.stats.chi2.cdf(Qx, X2df)
+        X2p=1 - stats.chi2.cdf(Qx, X2df)
         print("X^2_%d p = %1.4f"%(X2df, X2p), file=sys.stdout)
 
         bootp=None
@@ -175,6 +184,11 @@ class Qx_test:
             bootp=np.mean(boots>Qx)
             print("Bootstrap p = %1.4f"%(bootp), file=sys.stdout)
 
+        #If we supply an output file, then add the results to the end of that file
+        if output_file:
+            output_file.write("%s\t%1.4f\t%1.4f\t%1.4f\n" % (",".join(self.data.pops), Qx, X2p, bootp))
+
+        #If we supply an output root, then write all the results to that root
         if output_root:
             with open(output_root + ".Qx.stat.txt", "w") as f:
                 f.write(str(Qx))
@@ -187,7 +201,7 @@ class Qx_test:
                 
 ###########################################################################
 
-    def plot_bootstrap_hist(self, stats, df, Qx, bootp, out_file, title=""):
+    def plot_bootstrap_hist(self, boots, df, Qx, bootp, out_file, title=""):
         """
         Plot a histogram of the bootsrap values
         """
@@ -197,18 +211,18 @@ class Qx_test:
         for item in [fig, ax]:
             item.patch.set_visible(False)
             
-        N = max(10, len(stats)/20)
-        n, bins, patches = ax.hist(stats, N, normed=1, facecolor='#377EBA', 
+        N = max(10, len(boots)/20)
+        n, bins, patches = ax.hist(boots, N, normed=1, facecolor='#377EBA',  # @UnusedVariable
                                    alpha=0.75, label="Bootstrap")
         xs = np.arange(bins[1], bins[-1]+1,0.1)
-        ys = sp.stats.chi2.pdf( xs, df)
+        ys = stats.chi2.pdf( xs, df)
         ax.plot(xs, ys, 'b', linewidth=2, label="Theoretical")
         ax.set_xlabel('Qx')
         ax.set_ylabel('Density')
         ax.set_title(title)
         plt.axvline(Qx, color="r", linewidth=2, label="Observed")
-        plt.text(Qx+1,  sp.stats.chi2.pdf( Qx, df)+0.01
-                 , "p = %1.4f"%(np.mean(stats>Qx)), color="red")
+        plt.text(Qx+1,  stats.chi2.pdf( Qx, df)+0.01
+                 , "p = %1.4f"%(np.mean(boots>Qx)), color="red")
         plt.legend(frameon=False)
         plt.savefig(out_file)
         
@@ -251,11 +265,12 @@ class Qx_test:
             eff_bins=self.effect_frequency_bin_counts()
             if len(eff_bins)!=self.N_FREQ_BINS or len(self.data_bins)!=self.N_FREQ_BINS:
                 raise Exception("Length of effect bins does not match length of data bins")
-            new_ids=np.zeros(K, dtype=int)
-            new_bins=np.random.choice(self.N_FREQ_BINS, K, p=eff_bins, replace=True)
-            for k in range(K):
-                new_ids[k]=np.random.choice(self.data_bins[new_bins[k]], 1)
-                sample=G[new_ids,:]
+            new_ids=[]
+            new_bin_counts=np.random.multinomial(K, eff_bins)
+            for ibin in range(self.N_FREQ_BINS):
+                if new_bin_counts[ibin]>0:
+                    new_ids.append(np.random.choice(self.data_bins[ibin], new_bin_counts[ibin]))
+            sample=G[np.concatenate(new_ids),:]
             return sample
         else:
             sample=G[np.random.randint(G.shape[0],size=K),:]

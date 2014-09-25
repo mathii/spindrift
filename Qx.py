@@ -1,30 +1,28 @@
 # Implementing the QST-like test from Berg & Coop
 
 from __future__ import division, print_function
-import numpy as np
 import sys, getopt
-import drift, effects, Qx_test, snp_data, parse
-from scipy import stats
-import pdb
+import effects, Qx_test, snp_data
+from parse import parse_list_of_pops, parse_pops
 
 ###########################################################################
 
 def parse_options():
     """
     data: Root of genotype data in eigenstrat format, i.e. root{.geno .snp .ind}
-    gwas: Gwas data. 3-col: CHR, POS, EFFECT
+    gwas: Gwas data. 3-col: CHR, POS, EFFECT OTHER BETA
     pops: Comma separated list of populations to include
     inbred: Comma separated list of pops that might be inbred
     center: Populations to center allele frequency around. 
     nboot: Number of bootstrap replicates. 
     """
-    options ={ "data":"", "gwas":"", "pops":[], "inbred":[],
-               "nboot":1000, "out":None, "used":False, "center":[]}
+    options ={ "data":"", "gwas":"", "pops":[[]], "inbred":[], "full":False,
+               "nboot":1000, "out":None, "used":False, "match":True, "center":[]}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "d:g:p:n:o:i:uc:",
+        opts, args = getopt.getopt(sys.argv[1:], "d:g:p:n:o:i:c:umf",  # @UnusedVariable
                                    ["data", "gwas", "pops", "nboot", "out", 
-                                    "inbred", "used", "center"])
+                                    "inbred", "center", "used", "nomatch", "full"])
     except Exception as err:
         print(str(err))
         sys.exit()
@@ -33,11 +31,13 @@ def parse_options():
         if o in ["-d","--data"]:         options["data"] = a
         elif o in ["-o","--out"]:        options["out"] = a
         elif o in ["-g","--gwas"]:       options["gwas"] = a
-        elif o in ["-p","--pops"]:       options["pops"] = parse.parse_pops(a)
-        elif o in ["-i","--inbred"]:     options["inbred"] = parse.parse_pops(a)
-        elif o in ["-c","--center"]:     options["center"] = parse.parse_pops(a)
+        elif o in ["-c","--center"]:     options["center"] = parse_pops(a)
+        elif o in ["-p","--pops"]:       options["pops"] = parse_list_of_pops(a)
+        elif o in ["-i","--inbred"]:     options["inbred"] = parse_pops(a)
         elif o in ["-n","--nboot"]:      options["nboot"] = int(a)
         elif o in ["-u","--used"]:       options["used"] = True
+        elif o in ["-m","--nomatch"]:    options["match"] = False
+        elif o in ["-f","--full"]:       options["full"] = True
 
     print("found options:", file=sys.stderr)
     print(options, file=sys.stderr)
@@ -47,18 +47,30 @@ def parse_options():
 ###########################################################################
 
 def main(options):
-    # Load population data - TODO: Move all this to an eigenstrat class
-    data=snp_data.eigenstrat_data(options["data"], options["pops"], True, options["inbred"])
+    # Load population data 
+    
+    output_file=open(options["out"]+"results.txt", "w")
+    output_file.write("Pops\tQx\tP.X2\tP.boot\n")
+    
+    output_root=None
+    full_results=len(options["pops"])==1 or options["full"]
 
-    # Load gwas data
     gwas=effects.effects(options["gwas"])
+    
+    for pops in options["pops"]:
+        print("\nLoading: "+",".join(pops), file=sys.stderr)
 
-    test=Qx_test.Qx_test(gwas, data, options["center"])
-    Qx=test.test( output_root=options["out"], nboot=options["nboot"])
-    if options["used"]:
-        test.output_effects(options["out"])
+        data=snp_data.eigenstrat_data(options["data"], pops, True, options["inbred"])
+        test=Qx_test.Qx_test(gwas, data, center=options["center"], match=options["match"])
 
-        return
+        if full_results:
+            output_root=options["out"]+"_".join(pops)
+        
+        test.test( output_file=output_file, output_root=output_root, nboot=options["nboot"])
+        if options["used"]:
+            test.output_effects(options["out"])
+    
+    return
 
 ###########################################################################
 

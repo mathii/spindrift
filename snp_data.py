@@ -3,6 +3,7 @@
 from __future__ import division, print_function
 import numpy as np
 import sys
+import pyEigenstrat as pE
 import pdb
 
 ###########################################################################
@@ -20,12 +21,11 @@ class snp_data:
     virtual base class - derived classes need to implement 
     the load function. 
     """
-    def __init__(self, file_root, pops=None, no_gt=True, inbred=[], sparse=2, snps=None):
+    def __init__(self, file_root, pops=None, no_gt=True, inbred=[], sparse=2, snps=None, freqs=True, inds=None):
         """
         File root is the root of an eigenstrat file. 
         """
-        self.load(file_root, pops, snps)
-
+        self.load(file_root, pops, snps, inds)
         self.add_population_counts(inbred=inbred)
         if hasattr(self, "geno") and no_gt:  # Only keep the genotypes if we want them
             del self.geno
@@ -34,7 +34,7 @@ class snp_data:
             self.remove_sparse(n=sparse)
         self.add_population_freqs()
 
-    def load(self, file_root, pops):
+    def load(self, file_root, pops, snps, inds):
         """
         Virtual
         """
@@ -64,7 +64,6 @@ class snp_data:
                 count[:,j]=count_1+2*count_2
                 total[:,j]=2*(count_0+count_1+count_2)
             
-
         self.count=count
         self.total=total
 
@@ -84,6 +83,7 @@ class snp_data:
             if self.count.shape!=self.total.shape:
                 raise Exception("Count and total out of shape")
 
+<<<<<<< HEAD
         for what in ["geno", "alt_count", "ref_count"]:
             if hasattr(self, what):
                 if self.geno.shape[0]!=NSNP:
@@ -91,6 +91,14 @@ class snp_data:
                 if self.geno.shape[1]!=NIND:
                     raise Exception("%s has wrong number of individuals"%(what,))
             
+=======
+        if hasattr(self, "geno"):
+            if self.geno.shape[0]!=NSNP:
+                raise Exception("Genotype has wrong number of snps")
+            if self.geno.shape[1]!=NIND:
+                raise Exception("Genotype has wrong number of individuals")
+
+>>>>>>> 9fb155d229ed3a716ba70dbbd41baf08a35a2ca3
         if hasattr(self, "freq"):
             if self.freq.shape[0]!=NSNP:
                 raise Exception("Frequency has wrong number of snps")
@@ -140,6 +148,7 @@ class snp_data:
         Compute population frequencies - can add adjsted frequencies normalised
         to mean. Need to call population_count first. 
         """
+        old_settings=np.seterr(divide='ignore', invalid='ignore')
         self.freq=self.count/self.total
 
         # transform
@@ -148,34 +157,27 @@ class snp_data:
         for i in range(len(self.pops)):
             self.tfreq[:,i]=(self.freq[:,i]-mean)/(mean*(1-mean))
             
-    
+        np.seterr(**old_settings)
+        
 ###########################################################################
 # END CLASS
 
 class eigenstrat_data(snp_data):
     """
-    Unpacked Eigenstrat data
+    Either packed or unpacked Eigenstrat data using the pyEigenstrat module. 
     """
         
-    def load(self, file_root, pops=None, snps=None):
+    def load(self, file_root, pops=None, snps=None, inds=None):
         """
         Load from an unpacked eigenstrat file into our internal format.
         If pops is specified then load only the specified populations. 
         """
-        # Read .ind file
-        ind,pops,include=load_ind_file(file_root, pops)    
-        # Read .snp file
-        snp,snp_include=load_snp_file(file_root, snps)
-        
-        # Finally, read .geno file
-        geno=np.genfromtxt(file_root+".geno", dtype='i1', delimiter=1, 
-                           usecols=np.where(include)[0])
-        geno=geno[snp_include,:]
+        data=pE.load(file_root, pops=pops, snps=snps, inds=inds)
 
-        self.ind=ind
-        self.snp=snp
-        self.pops=pops
-        self.geno=geno
+        self.ind=data.ind
+        self.snp=data.snp
+        self.pops=np.unique(data.ind["POP"])
+        self.geno=data.geno()
 
 ###########################################################################
 # END CLASS
