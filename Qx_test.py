@@ -248,7 +248,7 @@ class Qx_test:
         data_freq=np.mean(self.data.freq, axis=1)
         IDS=[None]*bins
         for i in range(bins):
-            IDS[i]=np.where(np.logical_and(data_freq>breaks[i], data_freq<breaks[i+1]))[0]
+            IDS[i]=np.where(np.logical_and(data_freq>=breaks[i], data_freq<breaks[i+1]))[0]
         return IDS
         
 ###########################################################################

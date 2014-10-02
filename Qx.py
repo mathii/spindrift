@@ -49,7 +49,7 @@ def parse_options():
 def main(options):
     # Load population data 
     
-    output_file=open(options["out"]+"results.txt", "w")
+    output_file=open(options["out"]+".results.txt", "w")
     output_file.write("Pops\tQx\tP.X2\tP.boot\n")
     
     output_root=None
