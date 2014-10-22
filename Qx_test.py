@@ -186,7 +186,11 @@ class Qx_test:
 
         #If we supply an output file, then add the results to the end of that file
         if output_file:
-            output_file.write("%s\t%1.4f\t%1.4f\t%1.4f\n" % (",".join(self.data.pops), Qx, X2p, bootp))
+            if nboot: 
+                output_file.write("%s\t%1.4f\t%1.4f\t%1.4f\n" % (",".join(self.data.pops), Qx, X2p, bootp))
+            else:
+                output_file.write("%s\t%1.4f\t%1.4f\n" % (",".join(self.data.pops), Qx, X2p))
+
 
         #If we supply an output root, then write all the results to that root
         if output_root:
@@ -296,9 +300,9 @@ class Qx_test:
         Write the used effects to a file. 
         """
         np.savetxt(file_root+".Qx.used.txt",
-                   self.effects[["CHR", "POS", "EFFECT", "OTHER", "BETA"]],
-                   fmt="%s\t%d\t%s\t%s\t%f")
-        
+                       self.effects[["CHR", "POS", "EFFECT", "OTHER", "BETA"]],
+                       fmt="%s\t%d\t%s\t%s\t%f")
+            
 ###########################################################################
 # END CLASS
 

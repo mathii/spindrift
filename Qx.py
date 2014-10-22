@@ -9,20 +9,22 @@ from parse import parse_list_of_pops, parse_pops
 
 def parse_options():
     """
-    data: Root of genotype data in eigenstrat format, i.e. root{.geno .snp .ind}
-    gwas: Gwas data. 3-col: CHR, POS, EFFECT OTHER BETA
-    pops: Comma separated list of populations to include
-    inbred: Comma separated list of pops that might be inbred
-    center: Populations to center allele frequency around. 
-    nboot: Number of bootstrap replicates. 
+    -d data: Root of genotype data in eigenstrat format, i.e. root{.geno .snp .ind}
+    -g gwas: Gwas data. 3-col: CHR, POS, EFFECT OTHER BETA
+    -p pops: Comma separated list of populations to include
+    [-i] inbred: Comma separated list of pops that might be inbred
+    [-c] center: Populations to center allele frequency around. 
+    [-n] nboot: Number of bootstrap replicates. 
+    [-x] exclude: Exclude these individuals 
     """
     options ={ "data":"", "gwas":"", "pops":[[]], "inbred":[], "full":False,
-               "nboot":1000, "out":None, "used":False, "match":True, "center":[]}
+               "nboot":1000, "out":None, "used":False, "match":True, "center":[],
+               "exclude":[]}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "d:g:p:n:o:i:c:umf",  # @UnusedVariable
-                                   ["data", "gwas", "pops", "nboot", "out", 
-                                    "inbred", "center", "used", "nomatch", "full"])
+        opts, args = getopt.getopt(sys.argv[1:], "d:g:p:n:o:i:c:x:umf",  # @UnusedVariable
+                                   ["data", "gwas", "pops", "nboot", "out", "inbred", 
+                                    "center", "exclude", "used", "nomatch", "full"])
     except Exception as err:
         print(str(err))
         sys.exit()
@@ -34,6 +36,7 @@ def parse_options():
         elif o in ["-c","--center"]:     options["center"] = parse_pops(a)
         elif o in ["-p","--pops"]:       options["pops"] = parse_list_of_pops(a)
         elif o in ["-i","--inbred"]:     options["inbred"] = parse_pops(a)
+        elif o in ["-x","--exclude"]:    options["exclude"] = parse_pops(a) #actually individuals not populations
         elif o in ["-n","--nboot"]:      options["nboot"] = int(a)
         elif o in ["-u","--used"]:       options["used"] = True
         elif o in ["-m","--nomatch"]:    options["match"] = False
@@ -50,7 +53,10 @@ def main(options):
     # Load population data 
     
     output_file=open(options["out"]+".results.txt", "w")
-    output_file.write("Pops\tQx\tP.X2\tP.boot\n")
+    if options["nboot"]: 
+        output_file.write("Pops\tQx\tP.X2\tP.boot\n")
+    else:
+        output_file.write("Pops\tQx\tP.X2\n")
     
     output_root=None
     full_results=len(options["pops"])==1 or options["full"]

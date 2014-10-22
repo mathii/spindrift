@@ -7,7 +7,7 @@ import re
 
 def parse_pops(instr):
     """
-    Pasrse a list of populations. Can either be a comma separated string, 
+    Parse a list of populations. Can either be a comma separated string, 
     or a file containing either whitespace or comma separated names. 
     """
     data=None

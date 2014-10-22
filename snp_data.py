@@ -21,11 +21,12 @@ class snp_data:
     virtual base class - derived classes need to implement 
     the load function. 
     """
-    def __init__(self, file_root, pops=None, no_gt=True, inbred=[], sparse=2, snps=None, freqs=True, inds=None):
+    def __init__(self, file_root, pops=None, no_gt=True, inbred=[], sparse=2, 
+                 snps=None, freqs=True, inds=None, exclude_inds=None):
         """
         File root is the root of an eigenstrat file. 
         """
-        self.load(file_root, pops, snps, inds)
+        self.load(file_root, pops=pops, inds=inds, exclude_inds=exclude_inds, snps=snps)
         self.add_population_counts(inbred=inbred)
         if hasattr(self, "geno") and no_gt:  # Only keep the genotypes if we want them
             del self.geno
@@ -158,12 +159,12 @@ class eigenstrat_data(snp_data):
     Either packed or unpacked Eigenstrat data using the pyEigenstrat module. 
     """
         
-    def load(self, file_root, pops=None, snps=None, inds=None):
+    def load(self, file_root, pops=None, inds=None, exclude_inds=None, snps=None):
         """
         Load from an unpacked eigenstrat file into our internal format.
         If pops is specified then load only the specified populations. 
         """
-        data=pE.load(file_root, pops=pops, snps=snps, inds=inds)
+        data=pE.load(file_root, pops=pops, inds=inds, exclude_inds=exclude_inds, snps=snps)
 
         self.ind=data.ind
         self.snp=data.snp
@@ -178,16 +179,16 @@ class read_data(snp_data):
     This class has read-level data, and generates genotypes from that. 
     """
 
-    def load(self, file_root, pops=None, snps=None):
+    def load(self, file_root, pops=None, inds=None, exclude_inds=None, snps=None):
         """
         This loads in data in Nick Patternson's snp .ans format.
         Load, but look for a .ans file instead of a .geno file.
         9 Columns: SNPID, chr, pos, ref, alt, "::"? SampleID ref alt reads
         """
         # Read .ind file
-        ind,pops,include=load_ind_file(file_root, pops)    
+        ind,pops,_include=pE.load_ind_file(file_root, pops, inds, exclude_inds)    
         # Read .snp file
-        snp,snp_include=load_snp_file(file_root, snps)
+        snp,_snp_include=pE.load_snp_file(file_root, pops, snps)
         # Read .ans file (nickformat)
         ans=load_ans_file(file_root, snp, ind)
 
@@ -223,7 +224,7 @@ class read_data(snp_data):
         """
         Add population counts based on the reads. methods should be 
         max: maximise diversity. het if there are both alleles, hom otherwise.
-        EM: Infer using EM algorithm. Todo. 
+        TODO: EM: Infer using EM algorithm. 
         """
         print("Adding counts with max diversity method", file=sys.stderr)
         npop=len(self.pops)
@@ -263,52 +264,6 @@ class read_data(snp_data):
     
 ###########################################################################
 # END CLASS
-
-def load_snp_file(file_root, snps=None):
-    """
-    Load a .snp file into the right format. 
-    """
-    snp_file=open(file_root+".snp", "r")
-    line=snp_file.readline()
-    bits=line.split()
-    snpdt=dt_snp1                     # does the snp file have the alleles in?
-    snpcol=(0,1,3)
-    if len(bits) not in [4,6]:
-        raise Exception("Could not read snp file")
-    elif len(bits)==6:
-        snpdt=dt_snp2
-        snpcol=(0,1,3,4,5)
-            
-    snp_file.seek(0)
-    snp=np.genfromtxt(snp_file, dtype=snpdt, usecols=snpcol)
-    snp_file.close()
-
-    snp_include=np.ones(len(snp), dtype=bool)
-    if snps is not None:
-        snp_include=np.in1d(snp["ID"], snps)
-        snp=snp[snp_include]
-        
-    return snp,snp_include
-
-###########################################################################
-
-def load_ind_file(file_root, pops=None):
-    """
-    Load a .ind file, restricting to individuals in the specified
-    populations. 
-    """
-    ind=np.genfromtxt(file_root+".ind", dtype=dt_ind, usecols=(0,2))   # ignore sex
-
-    include=np.ones(len(ind), dtype=bool)
-    if pops:
-        include=np.in1d(ind["POP"], pops)
-        ind=ind[include]
-    else:
-        pops=np.unique(ind["POP"])
-
-    return ind,pops,include
-
-###########################################################################
 
 def load_ans_file(file_root, snp, ind):
     """
