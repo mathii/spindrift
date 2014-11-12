@@ -1,12 +1,10 @@
 #Extract and print allele frequencies for a set of populations. 
 
 from __future__ import division, print_function
-import numpy as np
 import sys, getopt
 import snp_data
-from scipy import stats
 from parse import parse_pops
-import pdb
+import pyEigenstrat as pE
 
 ###########################################################################
 
@@ -22,7 +20,7 @@ def parse_options():
                "snps":"", "out":"", "genotypes":False, "reads":False}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "d:p:i:o:n:s:gr",
+        opts, _args = getopt.getopt(sys.argv[1:], "d:p:i:o:n:s:gr",
                                    ["data", "pops", "inds", "out", "inbred",
                                     "snps", "genotypes", "reads"])
 
@@ -96,8 +94,8 @@ def output_frequencies(data, out, genotypes=False):
 
 def main(options):
     # Load population data - TODO: Move all this to an eigenstrat class
-    snps,snp_include=snp_data.load_snp_file(options["snps"])
-
+    snps,_snp_include=pE.load_snp_file(options["snps"])
+    
     if options["reads"]:
         data=snp_data.read_data(options["data"], options["pops"], 
                                   not options["genotypes"], options["inbred"], 
@@ -105,8 +103,8 @@ def main(options):
     else:
         data=snp_data.eigenstrat_data(options["data"], options["pops"], 
                                   not options["genotypes"], options["inbred"],
-                                  sparse=0, snps=snps["ID"], inds=options["inds"])
-    
+                                  sparse=0, snps=snps["ID"], inds=options["inds"],
+                                  remove_monomorphic=False)
     output_frequencies(data, options["out"], options["genotypes"])
 
     return

@@ -22,7 +22,7 @@ class snp_data:
     the load function. 
     """
     def __init__(self, file_root, pops=None, no_gt=True, inbred=[], sparse=2, 
-                 snps=None, freqs=True, inds=None, exclude_inds=None):
+                 snps=None, freqs=True, inds=None, exclude_inds=None, remove_monomorphic=True):
         """
         File root is the root of an eigenstrat file. 
         """
@@ -30,7 +30,8 @@ class snp_data:
         self.add_population_counts(inbred=inbred)
         if hasattr(self, "geno") and no_gt:  # Only keep the genotypes if we want them
             del self.geno
-        self.remove_monomorphic()
+        if remove_monomorphic:
+            self.remove_monomorphic()
         if sparse:
             self.remove_sparse(n=sparse)
         self.add_population_freqs()
@@ -165,7 +166,6 @@ class eigenstrat_data(snp_data):
         If pops is specified then load only the specified populations. 
         """
         data=pE.load(file_root, pops=pops, inds=inds, exclude_inds=exclude_inds, snps=snps)
-
         self.ind=data.ind
         self.snp=data.snp
         self.pops=np.unique(data.ind["POP"])
@@ -255,7 +255,7 @@ class read_data(snp_data):
 
                 count[:,j]=np.sum(this_count, axis=1)
                 total[:,j]=np.sum(this_total, axis=1)
-                pdb.set_trace()
+
         self.count=count
         self.total=total            
         
