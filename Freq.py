@@ -95,7 +95,7 @@ def output_frequencies(data, out, genotypes=False):
 def main(options):
     # Load population data - TODO: Move all this to an eigenstrat class
     snps,_snp_include=pE.load_snp_file(options["snps"])
-    
+
     if options["reads"]:
         data=snp_data.read_data(options["data"], options["pops"], 
                                   not options["genotypes"], options["inbred"], 
@@ -105,6 +105,7 @@ def main(options):
                                   not options["genotypes"], options["inbred"],
                                   sparse=0, snps=snps["ID"], inds=options["inds"],
                                   remove_monomorphic=False)
+
     output_frequencies(data, options["out"], options["genotypes"])
 
     return

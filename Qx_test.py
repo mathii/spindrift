@@ -159,7 +159,7 @@ class Qx_test:
         
 ###########################################################################
 
-    def test(self, output_file=None, output_root=None, nboot=None):
+    def test(self, output_file=None, output_root=None, nboot=None, values=None):
         """
         Actually run the test, compute p-values. 
         """
@@ -185,11 +185,18 @@ class Qx_test:
             print("Bootstrap p = %1.4f"%(bootp), file=sys.stdout)
 
         #If we supply an output file, then add the results to the end of that file
+        
         if output_file:
+            outstring=["%s", "%1.4f", "%1.4f"]
+            outdata=[",".join(self.data.pops), Qx, X2p]
             if nboot: 
-                output_file.write("%s\t%1.4f\t%1.4f\t%1.4f\n" % (",".join(self.data.pops), Qx, X2p, bootp))
-            else:
-                output_file.write("%s\t%1.4f\t%1.4f\n" % (",".join(self.data.pops), Qx, X2p))
+                outstring.append("%1.4f")
+                outdata.append(bootp)
+            if values:
+                outstring.append("%s")
+                outdata.append(",".join(["{:.4}".format(x) for x in Z]))
+
+            output_file.write(("\t".join(outstring)+"\n") % tuple(outdata))
 
 
         #If we supply an output root, then write all the results to that root
@@ -202,7 +209,9 @@ class Qx_test:
             if MATPLOTLIB_AVAILABLE:
                 self.plot_bootstrap_hist(boots, X2df, Qx, bootp, output_root+".Qx.boot.pdf",
                                          ",".join(self.data.pops))
-                
+
+
+                                
 ###########################################################################
 
     def plot_bootstrap_hist(self, boots, df, Qx, bootp, out_file, title=""):

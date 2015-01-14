@@ -19,12 +19,12 @@ def parse_options():
     """
     options ={ "data":"", "gwas":"", "pops":[[]], "inbred":[], "full":False,
                "nboot":1000, "out":None, "used":False, "match":True, "center":[],
-               "exclude":[]}
+               "exclude":[], "values":False}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "d:g:p:n:o:i:c:x:umf",  # @UnusedVariable
+        opts, args = getopt.getopt(sys.argv[1:], "d:g:p:n:o:i:c:x:umfv",  # @UnusedVariable
                                    ["data", "gwas", "pops", "nboot", "out", "inbred", 
-                                    "center", "exclude", "used", "nomatch", "full"])
+                                    "center", "exclude", "used", "nomatch", "full", "values"])
     except Exception as err:
         print(str(err))
         sys.exit()
@@ -41,6 +41,7 @@ def parse_options():
         elif o in ["-u","--used"]:       options["used"] = True
         elif o in ["-m","--nomatch"]:    options["match"] = False
         elif o in ["-f","--full"]:       options["full"] = True
+        elif o in ["-v","--values"]:     options["values"] = True
 
     print("found options:", file=sys.stderr)
     print(options, file=sys.stderr)
@@ -53,10 +54,13 @@ def main(options):
     # Load population data 
     
     output_file=open(options["out"]+".results.txt", "w")
-    if options["nboot"]: 
-        output_file.write("Pops\tQx\tP.X2\tP.boot\n")
-    else:
-        output_file.write("Pops\tQx\tP.X2\n")
+    headings=["Pops", "Qx", "P.X2"]
+    if options["nboot"]:
+        headings.append("P.boot")
+    if options["values"]:
+        headings.append("Genetic.values")
+
+    output_file.write("\t".join(headings)+"\n")
     
     output_root=None
     full_results=len(options["pops"])==1 or options["full"]
@@ -72,7 +76,7 @@ def main(options):
         if full_results:
             output_root=options["out"]+"_".join(pops)
         
-        test.test( output_file=output_file, output_root=output_root, nboot=options["nboot"])
+        test.test( output_file=output_file, output_root=output_root, nboot=options["nboot"], values=options["values"])
         if options["used"]:
             test.output_effects(options["out"])
     
