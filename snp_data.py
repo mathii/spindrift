@@ -174,6 +174,68 @@ class eigenstrat_data(snp_data):
 ###########################################################################
 # END CLASS
 
+class frequency_data(snp_data):
+    """
+    This class looks like a snp_data class but actually just loads
+    a file of frequencies. This has m allele frequencies in n populations.
+    n+3 columns total, m+1 rows with a header row.
+    The first three columns are snpID, chr, pos in that order
+    The remaining N columns are populations
+    Population names taken from the column headings
+    Entries are converted to floats. 
+
+    Um, in hindisght, maybe this is a case for duck typing. 
+    """
+
+    def load(self, file_root, pops=None, snps=None):
+        """
+        load the frequency file
+        """
+
+        self.ind=[]
+        freq_file=open(file_root, "r")
+        header=freq.next()
+        pops=header.split()[3:]
+        n_pops=len(pops)
+        self.pops=pops
+        self.freq=np.readtxt(freq_file, dtype=float, skiprows=1, usecols=range(3, 3+n_pops))
+
+        freq_file.seek(0)
+        freq_file.next()
+        snpdt=pE.dt_snp1 
+        snpcol=(0,1,2)
+        self.snp=np.genfromtxt(freq_file, dtype=snpdt, usecols=snpcol)
+        freq_file.close()
+        
+    def add_population_counts(self, inbred):
+        """
+        Do nothing
+        """
+        pass
+
+    def remove_monomorphic(self):
+        """
+        TODO: Implement this
+        """
+        pass
+
+    def remove_sparse(self):
+        """
+        TODO: Implement this?
+        """
+        pass
+
+    def add_population_freqs():
+        """
+        We already did this! 
+        """
+        pass
+        
+        
+        
+###########################################################################
+# END CLASS
+
 class read_data(snp_data):
     """
     This class has read-level data, and generates genotypes from that. 

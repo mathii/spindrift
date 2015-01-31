@@ -10,6 +10,7 @@ from parse import parse_list_of_pops, parse_pops
 def parse_options():
     """
     -d data: Root of genotype data in eigenstrat format, i.e. root{.geno .snp .ind}
+    -q frequency: data file in frequency format 
     -g gwas: Gwas data. 3-col: CHR, POS, EFFECT OTHER BETA
     -p pops: Comma separated list of populations to include
     [-i] inbred: Comma separated list of pops that might be inbred
@@ -19,18 +20,20 @@ def parse_options():
     """
     options ={ "data":"", "gwas":"", "pops":[[]], "inbred":[], "full":False,
                "nboot":1000, "out":None, "used":False, "match":True, "center":[],
-               "exclude":[], "values":False}
+               "exclude":[], "values":False, "frequency":""}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "d:g:p:n:o:i:c:x:umfv",  # @UnusedVariable
-                                   ["data", "gwas", "pops", "nboot", "out", "inbred", 
-                                    "center", "exclude", "used", "nomatch", "full", "values"])
+        opts, args = getopt.getopt(sys.argv[1:], "d:q:g:p:n:o:i:c:x:umfv",  # @UnusedVariable
+                                   ["data", "frequency", "gwas", "pops", "nboot", "out",
+                                    "inbred", "center", "exclude", "used", "nomatch",
+                                    "full", "values"])
     except Exception as err:
         print(str(err))
         sys.exit()
 
     for o, a in opts:
         if o in ["-d","--data"]:         options["data"] = a
+        elif o in ["-q","--frequency"]:  options["frequency"] = a
         elif o in ["-o","--out"]:        options["out"] = a
         elif o in ["-g","--gwas"]:       options["gwas"] = a
         elif o in ["-c","--center"]:     options["center"] = parse_pops(a)
@@ -46,6 +49,9 @@ def parse_options():
     print("found options:", file=sys.stderr)
     print(options, file=sys.stderr)
 
+    if options["data"] and options["frequency"]:
+        raise Exception("Specify only one of data (-d) and frequency (-q)")
+    
     return options
    
 ###########################################################################
@@ -70,7 +76,13 @@ def main(options):
     for pops in options["pops"]:
         print("\nLoading: "+",".join(pops), file=sys.stderr)
 
-        data=snp_data.eigenstrat_data(options["data"], pops, True, options["inbred"])
+        if options["data"]:
+            data=snp_data.eigenstrat_data(options["data"], pops, True, options["inbred"])
+        elif options["frequency"]:
+            data=snp_data.frequency_data(options["frequency"], pops)
+        else:
+            raise Exception("No data or frequency file specified")
+            
         test=Qx_test.Qx_test(gwas, data, center=options["center"], match=options["match"])
 
         if full_results:
