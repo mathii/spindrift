@@ -187,18 +187,21 @@ class frequency_data(snp_data):
     Um, in hindisght, maybe this is a case for duck typing. 
     """
 
-    def load(self, file_root, pops=None, snps=None):
+    def load(self, file_root, pops=None, inds=None, exclude_inds=None, snps=None):
         """
         load the frequency file
         """
 
+        if inds or exclude_inds:
+            raise Exception("Neither inds nor exclude_inds do anything here")
+        
         self.ind=[]
         freq_file=open(file_root, "r")
-        header=freq.next()
-        pops=header.split()[3:]
-        n_pops=len(pops)
-        self.pops=pops
-        self.freq=np.readtxt(freq_file, dtype=float, skiprows=1, usecols=range(3, 3+n_pops))
+        header=freq_file.next()
+        file_pops=np.array(header.split()[3:])
+        which_pops=np.in1d(file_pops, np.array(pops))
+        self.pops=list(file_pops[which_pops])
+        self.freq=np.loadtxt(freq_file, dtype=float, usecols=3+np.where(which_pops)[0])
 
         freq_file.seek(0)
         freq_file.next()
@@ -206,6 +209,11 @@ class frequency_data(snp_data):
         snpcol=(0,1,2)
         self.snp=np.genfromtxt(freq_file, dtype=snpdt, usecols=snpcol)
         freq_file.close()
+
+        if snps:
+            include_snps=np.in1d(self.snp["ID"], np.array(snps))
+            self.snp=self.snp[include_snps,]
+            self.freq=self.freq[include_snps,]
         
     def add_population_counts(self, inbred):
         """
@@ -219,13 +227,13 @@ class frequency_data(snp_data):
         """
         pass
 
-    def remove_sparse(self):
+    def remove_sparse(self, n=None):
         """
         TODO: Implement this?
         """
         pass
 
-    def add_population_freqs():
+    def add_population_freqs(self):
         """
         We already did this! 
         """

@@ -82,7 +82,7 @@ def main(options):
             data=snp_data.frequency_data(options["frequency"], pops)
         else:
             raise Exception("No data or frequency file specified")
-            
+
         test=Qx_test.Qx_test(gwas, data, center=options["center"], match=options["match"])
 
         if full_results:
