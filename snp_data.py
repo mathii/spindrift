@@ -205,8 +205,8 @@ class frequency_data(snp_data):
 
         freq_file.seek(0)
         freq_file.next()
-        snpdt=pE.dt_snp1 
-        snpcol=(0,1,2)
+        snpdt=pE.dt_snp2 
+        snpcol=(0,1,2,3,4)
         self.snp=np.genfromtxt(freq_file, dtype=snpdt, usecols=snpcol)
         freq_file.close()
 
