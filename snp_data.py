@@ -198,7 +198,7 @@ class frequency_data(snp_data):
         self.ind=[]
         freq_file=open(file_root, "r")
         header=freq_file.next()
-        file_pops=np.array(header.split()[3:])
+        file_pops=np.array(header.split()[5:])
         which_pops=np.in1d(file_pops, np.array(pops))
         self.pops=list(file_pops[which_pops])
         self.freq=np.loadtxt(freq_file, dtype=float, usecols=5+np.where(which_pops)[0])
