@@ -35,7 +35,7 @@ class snp_data:
         if sparse:
             self.remove_sparse(n=sparse)
         self.add_population_freqs()
-
+        
     def load(self, file_root, pops, snps, inds):
         """
         Virtual
@@ -168,6 +168,8 @@ class eigenstrat_data(snp_data):
         data=pE.load(file_root, pops=pops, inds=inds, exclude_inds=exclude_inds, snps=snps)
         self.ind=data.ind
         self.snp=data.snp
+        if len(np.unique(self.snp[["CHR", "POS"]]))!=len(self.snp):
+            raise Exception("SNPS in eigenstrat data are not unique")
         self.pops=np.unique(data.ind["POP"])
         self.geno=data.geno()
 
@@ -178,8 +180,8 @@ class frequency_data(snp_data):
     """
     This class looks like a snp_data class but actually just loads
     a file of frequencies. This has m allele frequencies in n populations.
-    n+3 columns total, m+1 rows with a header row.
-    The first three columns are snpID, chr, pos in that order
+    n+5 columns total, m+1 rows with a header row.
+    The first five columns are snpID, chr, pos REF ALT in that order
     The remaining N columns are populations
     Population names taken from the column headings
     Entries are converted to floats. 
@@ -202,13 +204,16 @@ class frequency_data(snp_data):
         which_pops=np.in1d(file_pops, np.array(pops))
         self.pops=list(file_pops[which_pops])
         self.freq=np.loadtxt(freq_file, dtype=float, usecols=5+np.where(which_pops)[0])
-
+        
         freq_file.seek(0)
         freq_file.next()
         snpdt=pE.dt_snp2 
         snpcol=(0,1,2,3,4)
         self.snp=np.genfromtxt(freq_file, dtype=snpdt, usecols=snpcol)
         freq_file.close()
+
+        if len(np.unique(self.snp[["CHR", "POS"]]))!=len(self.snp):
+            raise Exception("SNPS in frequency data are not unique")
 
         if snps:
             include_snps=np.in1d(self.snp["ID"], np.array(snps))

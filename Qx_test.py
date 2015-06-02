@@ -3,6 +3,7 @@ import numpy as np
 from scipy import stats
 import numpy.lib.recfunctions as nprec
 import sys, drift, copy
+import pdb
 
 MATPLOTLIB_AVAILABLE=True
 try:
@@ -23,6 +24,7 @@ class Qx_test:
     
     def __init__(self, effects, data, center=[], match=True):
         data.check()
+
         self.effects=effects.effects.copy()   # copied to make bootstrapping easier
         self.data=data                        # Not copied
         self.center=np.array(center)          # Which pops to center the allele frequencies.
@@ -47,7 +49,6 @@ class Qx_test:
         filter out all the snps that are not in the dataset. Also flip the
         alleles so that the EFFECT alelles is the REF allele 
         """
-
         # First, filter alleles: 
         new_effects=nprec.join_by(["CHR", "POS"], self.effects, 
                                   self.data.snp[["CHR", "POS", "REF", "ALT"]],
@@ -55,6 +56,8 @@ class Qx_test:
 
         print( "Removed "+str(len(self.effects)-len(new_effects))+
                " effect SNPS not in data",file=sys.stderr)
+        if not len(new_effects):
+            raise Exception("No effect SNPs in reference data")
 
         flipped=0
         removed=0

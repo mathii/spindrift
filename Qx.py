@@ -4,6 +4,7 @@ from __future__ import division, print_function
 import sys, getopt
 import effects, Qx_test, snp_data
 from parse import parse_list_of_pops, parse_pops
+import pdb
 
 ###########################################################################
 
@@ -72,7 +73,7 @@ def main(options):
     full_results=len(options["pops"])==1 or options["full"]
 
     gwas=effects.effects(options["gwas"])
-    
+
     for pops in options["pops"]:
         print("\nLoading: "+",".join(pops), file=sys.stderr)
 
