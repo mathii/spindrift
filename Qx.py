@@ -70,7 +70,7 @@ def main(options):
     output_file.write("\t".join(headings)+"\n")
     
     output_root=None
-    full_results=len(options["pops"])==1 or options["full"]
+    full_results=options["full"]
 
     gwas=effects.effects(options["gwas"])
 
