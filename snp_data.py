@@ -203,7 +203,7 @@ class frequency_data(snp_data):
         file_pops=np.array(header.split()[5:])
         which_pops=np.in1d(file_pops, np.array(pops))
         self.pops=list(file_pops[which_pops])
-        self.freq=np.loadtxt(freq_file, dtype=float, usecols=5+np.where(which_pops)[0])
+        self.freq=np.genfromtxt(freq_file, dtype=float, usecols=5+np.where(which_pops)[0])
         
         freq_file.seek(0)
         freq_file.next()
@@ -219,7 +219,12 @@ class frequency_data(snp_data):
             include_snps=np.in1d(self.snp["ID"], np.array(snps))
             self.snp=self.snp[include_snps,]
             self.freq=self.freq[include_snps,]
-        
+
+        na_sites=np.isnan(self.freq).any(axis=1)
+        self.freq=self.freq[~na_sites]
+        self.snp=self.snp[~na_sites]
+        print("Removed "+str(sum(na_sites))+" ", file=sys.stderr)
+                                
     def add_population_counts(self, inbred):
         """
         Do nothing
