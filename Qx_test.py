@@ -59,6 +59,9 @@ class Qx_test:
         if not len(new_effects):
             raise Exception("No effect SNPs in reference data")
 
+        if any(new_effects[("EFFECT")]=="N") or any(new_effects[("OTHER")]=="N"):
+            raise Exception("Effects corrupted. Either .gwas file or frequency file is bad (possibly contains duplicates)")
+
         flipped=0
         removed=0
         for rec in new_effects:
