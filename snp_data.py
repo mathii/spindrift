@@ -260,16 +260,16 @@ class read_data(snp_data):
     This class has read-level data, and generates genotypes from that. 
     """
 
-    def load(self, file_root, pops=None, inds=None, exclude_inds=None, snps=None):
+    def load(self, file_root, pops=None, inds=None, exclude_inds=None, snps=None, allow_duplicates=False):
         """
         This loads in data in Nick Patternson's snp .ans format.
         Load, but look for a .ans file instead of a .geno file.
         9 Columns: SNPID, chr, pos, ref, alt, "::"? SampleID ref alt reads
         """
         # Read .ind file
-        ind,pops,_include=pE.load_ind_file(file_root, pops, inds, exclude_inds)    
+        ind,_include=pE.load_ind_file(file_root, pops, inds, exclude_inds)    
         # Read .snp file
-        snp,_snp_include=pE.load_snp_file(file_root, pops, snps)
+        snp,_snp_include=pE.load_snp_file(file_root, snps)
         # Read .ans file (nickformat)
         ans=load_ans_file(file_root, snp, ind)
 

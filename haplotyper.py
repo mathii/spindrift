@@ -34,8 +34,7 @@ class read_haplotyper():
         
         results={}
         p_alleles=self.polarise_alleles_to_ref()
-        reordering = np.array([np.where(s==snps)[0][0] for s in self.data.snp["ID"]])
-
+        reordering = np.array([np.where(s==self.data.snp["ID"])[0][0] for s in snps])
         for i,indi in enumerate(self.data.ind["IND"]):
             this_prob=np.zeros((n_hap,n_hap),dtype=np.float64)
             for x in range(n_hap):
@@ -54,7 +53,7 @@ class read_haplotyper():
                     this_prob[x,y]=np.exp(sum(probs))
 
             this_prob=this_prob/np.sum(this_prob)
-            # if indi=="S0271":
+            # if indi=="I1100":
             #     pdb.set_trace()
             results[indi]=this_prob
 

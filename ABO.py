@@ -43,10 +43,14 @@ def parse_options():
 
 # These alleles *have* to be on the +strand
 # The last one is suspect. 
-ABO_SNPS=["rs8176720", "rs1053878", "rs8176741", "rs514659"]
-ABO_ALLELES={"A1":["T","G","G", "C"], "A1wA2":["T", "A", "G", "C"],
-             "B":["C","G","A", "C"], "O1":["T","G","G", "A"],
-             "O1w":["C","G","G", "A"], "O2":["C","G","G", "C"]}
+# ABO_SNPS=["rs8176720", "rs1053878", "rs8176741", "rs514659"]
+# ABO_ALLELES={"A1":["T","G","G", "C"], "A1wA2":["T", "A", "G", "C"],
+#              "B":["C","G","A", "C"], "O1":["T","G","G", "A"],
+#              "O1w":["C","G","G", "A"], "O2":["C","G","G", "C"]}
+# ABO_TYPES=["A", "B", "AB", "O"]
+
+ABO_SNPS=["rs8176719", "rs8176746", "rs8176747" ]
+ABO_ALLELES={"A":["I", "G", "C"], "B":["I", "T", "G"], "O":["D", "G", "C"]}
 ABO_TYPES=["A", "B", "AB", "O"]
 
 ###########################################################################
@@ -80,20 +84,16 @@ def collapse_types(results, haps):
     """
     Collapse the sub-alleles and get a type (A,B,AB or O)
     Haps should be sorted ABO_ALLELES, but just in case
-    """
-
-    prior=np.array([0.3, 0.2, 0.08, 0.4])
-    
+    """    
     types=np.array([h[0] for h in haps])
     probs=np.zeros(len(ABO_TYPES), dtype=np.float64)
     for x in range(len(haps)):
         for y in range(len(haps)):
             abo_type=type_from_haps(types[x], types[y])
             wh=np.where(np.array(ABO_TYPES)==abo_type)[0][0]
-            probs[wh]=max(probs[wh], results[x,y])
+            probs[wh]=max(probs[wh],results[x,y])
 
     # Hack: Fix this. 
-    probs=probs*prior
     probs=probs/sum(probs)
     
     return probs
@@ -111,16 +111,16 @@ def output(data, type_info, options):
     for indi in data.ind:
         sample=indi["IND"]
         pop=indi["POP"]
-
         # Pick the most likely haplotype and compute approximate posteriors. 
         best=np.argmax(type_info[sample])
+        log_lik=np.log(type_info[sample]/np.max(type_info[sample]))
         best_p=type_info[sample][best]
         best_type=abo_lower[best]
-        if best_p>0.8:
+        if np.max(np.delete(log_lik, best))<=-2:
             best_type=abo_upper[best]
 
-        info=(sample, pop, best_type)+tuple(type_info[sample])
-        outfile.write("%s\t%s\t%s\t%1.2f\t%1.2f\t%1.2f\t%1.2f\n"%info)
+        info=(sample, pop, best_type)+tuple(log_lik)
+        outfile.write("%s\t%s\t%s\t%1.3f\t%1.3f\t%1.3f\t%1.3f\n"%info)
 
     outfile.close()
         
