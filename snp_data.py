@@ -219,12 +219,12 @@ class frequency_data(snp_data):
             include_snps=np.in1d(self.snp["ID"], np.array(snps))
             self.snp=self.snp[include_snps,]
             self.freq=self.freq[include_snps,]
-
+            
         na_sites=np.isnan(self.freq).any(axis=1)
         self.freq=self.freq[~na_sites]
         self.snp=self.snp[~na_sites]
         print("Removed "+str(sum(na_sites))+" ", file=sys.stderr)
-                                
+
     def add_population_counts(self, inbred):
         """
         Do nothing
@@ -235,8 +235,13 @@ class frequency_data(snp_data):
         """
         TODO: Implement this
         """
-        pass
-
+        elements_not_all_zero=np.any(self.freq, axis=1)
+        elements_not_all_one=np.any(self.freq!=1, axis=1)
+        mono_sites=np.logical_or(~elements_not_all_zero,~elements_not_all_one)
+        self.freq=self.freq[~mono_sites]
+        self.snp=self.snp[~mono_sites]
+        print("Removed "+str(sum(mono_sites))+" ", file=sys.stderr)
+  
     def remove_sparse(self, n=None):
         """
         TODO: Implement this?

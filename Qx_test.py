@@ -227,7 +227,7 @@ class Qx_test:
         for item in [fig, ax]:
             item.patch.set_visible(False)
             
-        N = max(10, len(boots)/20)
+        N = int(max(10, len(boots)/20))
         n, bins, patches = ax.hist(boots, N, normed=1, facecolor='#377EBA',  # @UnusedVariable
                                    alpha=0.75, label="Bootstrap")
         xs = np.arange(bins[1], bins[-1]+1,0.1)

@@ -15,7 +15,6 @@ def estimate_covariance(freq_data, T):
     M,K = G.shape
 
     eps=np.mean(G, axis=0)
-
     var2=np.expand_dims(1/eps*(1-eps),axis=0)
     TGs=T.dot(G*var2)
     F=TGs.dot(TGs.T)/(K-1)
