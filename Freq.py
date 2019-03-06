@@ -17,12 +17,13 @@ def parse_options():
     out: root of output file. 
     """
     options ={ "data":"", "pops":None, "inds":None, "inbred":[],
-               "snps":"", "out":"", "genotypes":False, "reads":False}
+               "snps":"", "out":"", "genotypes":False, "reads":False, 
+               "allow_duplicates":False}
 
     try:
-        opts, _args = getopt.getopt(sys.argv[1:], "d:p:i:o:n:s:gr",
+        opts, _args = getopt.getopt(sys.argv[1:], "d:p:i:o:n:s:agr",
                                    ["data", "pops", "inds", "out", "inbred",
-                                    "snps", "genotypes", "reads"])
+                                    "snps", "allow_duplicates", "genotypes", "reads"])
 
     except Exception as err:
         print(str(err))
@@ -37,6 +38,7 @@ def parse_options():
         elif o in ["-n","--inbred"]:     options["inbred"] = parse_pops(a)
         elif o in ["-i","--inds"]:       options["inds"] = parse_pops(a)
         elif o in ["-g","--genotypes"]:  options["genotypes"] = True
+        elif o in ["-a","--allow_duplicates"]:  options["allow_duplicates"] = True
 
     print("found options:", file=sys.stderr)
     print(options, file=sys.stderr)
@@ -104,7 +106,8 @@ def main(options):
         data=snp_data.eigenstrat_data(options["data"], options["pops"], 
                                   not options["genotypes"], options["inbred"],
                                   sparse=0, snps=snps["ID"], inds=options["inds"],
-                                  remove_monomorphic=False)
+                                  remove_monomorphic=False, 
+                                  allow_duplicates=options["allow_duplicates"])
 
     output_frequencies(data, options["out"], options["genotypes"])
 

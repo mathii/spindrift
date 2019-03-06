@@ -22,11 +22,12 @@ class snp_data:
     the load function. 
     """
     def __init__(self, file_root, pops=None, no_gt=True, inbred=[], sparse=2, 
-                 snps=None, freqs=True, inds=None, exclude_inds=None, remove_monomorphic=True):
+                 snps=None, freqs=True, inds=None, exclude_inds=None, 
+                 remove_monomorphic=True, allow_duplicates=True):
         """
         File root is the root of an eigenstrat file. 
         """
-        self.load(file_root, pops=pops, inds=inds, exclude_inds=exclude_inds, snps=snps)
+        self.load(file_root, pops=pops, inds=inds, exclude_inds=exclude_inds, snps=snps, allow_duplicates=allow_duplicates)
         self.add_population_counts(inbred=inbred)
         if hasattr(self, "geno") and no_gt:  # Only keep the genotypes if we want them
             del self.geno
@@ -160,7 +161,7 @@ class eigenstrat_data(snp_data):
     Either packed or unpacked Eigenstrat data using the pyEigenstrat module. 
     """
         
-    def load(self, file_root, pops=None, inds=None, exclude_inds=None, snps=None):
+    def load(self, file_root, pops=None, inds=None, exclude_inds=None, snps=None, allow_duplicates=False):
         """
         Load from an unpacked eigenstrat file into our internal format.
         If pops is specified then load only the specified populations. 
@@ -168,7 +169,7 @@ class eigenstrat_data(snp_data):
         data=pE.load(file_root, pops=pops, inds=inds, exclude_inds=exclude_inds, snps=snps)
         self.ind=data.ind
         self.snp=data.snp
-        if len(np.unique(self.snp[["CHR", "POS"]]))!=len(self.snp):
+        if not allow_duplicates and len(np.unique(self.snp[["CHR", "POS"]]))!=len(self.snp):
             raise Exception("SNPS in eigenstrat data are not unique")
         self.pops=np.unique(data.ind["POP"])
         self.geno=data.geno()
@@ -189,7 +190,7 @@ class frequency_data(snp_data):
     Um, in hindisght, maybe this is a case for duck typing. 
     """
 
-    def load(self, file_root, pops=None, inds=None, exclude_inds=None, snps=None):
+    def load(self, file_root, pops=None, inds=None, exclude_inds=None, snps=None, allow_duplicates=False):
         """
         load the frequency file
         """
@@ -212,7 +213,7 @@ class frequency_data(snp_data):
         self.snp=np.genfromtxt(freq_file, dtype=snpdt, usecols=snpcol)
         freq_file.close()
 
-        if len(np.unique(self.snp[["CHR", "POS"]]))!=len(self.snp):
+        if not allow_duplicates and len(np.unique(self.snp[["CHR", "POS"]]))!=len(self.snp):
             raise Exception("SNPS in frequency data are not unique")
 
         if snps:
@@ -264,16 +265,16 @@ class read_data(snp_data):
     This class has read-level data, and generates genotypes from that. 
     """
 
-    def load(self, file_root, pops=None, inds=None, exclude_inds=None, snps=None):
+    def load(self, file_root, pops=None, inds=None, exclude_inds=None, snps=None, allow_duplicates=False):
         """
         This loads in data in Nick Patternson's snp .ans format.
         Load, but look for a .ans file instead of a .geno file.
         9 Columns: SNPID, chr, pos, ref, alt, "::"? SampleID ref alt reads
         """
         # Read .ind file
-        ind,pops,_include=pE.load_ind_file(file_root, pops, inds, exclude_inds)    
+        ind,_include=pE.load_ind_file(file_root, pops, inds, exclude_inds)    
         # Read .snp file
-        snp,_snp_include=pE.load_snp_file(file_root, pops, snps)
+        snp,_snp_include=pE.load_snp_file(file_root, snps)
         # Read .ans file (nickformat)
         ans=load_ans_file(file_root, snp, ind)
 
